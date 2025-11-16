@@ -7,35 +7,35 @@ on:
     branches: [ main ]
 
 jobs:
-  build-android:
-    name: Build Android APK
-    runs-on: ubuntu-latest
+#   build-android:
+#     name: Build Android APK
+#     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
+#     steps:
+#       - uses: actions/checkout@v3
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
+#       - name: Set up Flutter
+#         uses: subosito/flutter-action@v2
+#         with:
+#           channel: stable
 
-      - name: Install dependencies
-        run: flutter pub get
+#       - name: Install dependencies
+#         run: flutter pub get
 
-#      - name: Analyze code
-#        run: flutter analyze
+# #      - name: Analyze code
+# #        run: flutter analyze
 
-#      - name: Run tests
-#        run: flutter test
+# #      - name: Run tests
+# #        run: flutter test
 
-      - name: Build APK
-        run: flutter build apk --release
+#       - name: Build APK
+#         run: flutter build apk --release
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+#       - name: Upload artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: android-apk
+#           path: build/app/outputs/flutter-apk/app-release.apk
 
   build-ios:
     name: Build iOS for TestFlight
@@ -48,7 +48,6 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: pubspec.yaml
           channel: stable
 
       - name: Install dependencies
