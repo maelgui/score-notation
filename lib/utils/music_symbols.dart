@@ -5,8 +5,11 @@
 class MusicSymbols {
   MusicSymbols._();
 
+  // Articulations
+  static const String accent = '\uE4A0'; // articAccent
+
   // Noteheads
-  static const String accentedNoteHead = '\uE0A4';
+  static const String quarterNoteHead = '\uE0A4'; // Notehead black (tête seule)
   
   // Rudiments
   static const String flam = '\uE122';
@@ -29,7 +32,6 @@ class MusicSymbols {
   static const String halfNote = '\uE1D4'; // NoteHalfDown (blanche avec hampe vers le bas)
   
   // Noire (quarter note) - notehead noir avec hampe
-  static const String quarterNoteHead = '\uE0A4'; // Notehead black (tête seule)
   static const String quarterNote = '\uE1D6'; // NoteQuarterDown (noire complète avec hampe vers le bas)
   static const String quarterNoteUp = '\uE1D5'; // NoteQuarterUp (noire complète avec hampe vers le haut)
   
@@ -74,7 +76,7 @@ class MusicSymbols {
   }
 
   static const Map<String, String> byName = {
-    'accentedNote': accentedNoteHead,
+    'accentedNote': accent,
     'flam': flam,
     'drag': drag,
     'restQuarter': restQuarter,

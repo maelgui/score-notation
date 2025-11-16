@@ -151,10 +151,11 @@ class StaffPainter extends CustomPainter {
               : NoteEventHelper.getSymbol(entry.event);
           
           // Dessiner la note avec indication d'ornement si présent
+          final double noteCenterY = _noteCenterY(entry.event, centerY);
           _drawSymbol(
-            canvas, 
-            symbol, 
-            Offset(x, centerY), 
+            canvas,
+            symbol,
+            Offset(x, noteCenterY),
             isSelected: isSelected,
             ornament: entry.event.ornament,
           );
@@ -174,9 +175,9 @@ class StaffPainter extends CustomPainter {
               entry.position.reduce() == selectedPosition!.reduce();
           
           _drawSymbol(
-            canvas, 
-            symbol, 
-            Offset(x, centerY), 
+            canvas,
+            symbol,
+            Offset(x, centerY),
             isSelected: isSelected,
             ornament: null,
           );
@@ -223,6 +224,12 @@ class StaffPainter extends CustomPainter {
     final double offsetY = baselineY - baselineDistance;
 
     textPainter.paint(canvas, Offset(x, offsetY));
+  }
+
+  double _noteCenterY(NoteEvent event, double centerY) {
+    if (event.isRest) return centerY;
+    final double offset = AppConstants.noteLineOffset;
+    return event.isAboveLine ? centerY - offset : centerY + offset;
   }
 
   /// Retourne le symbole de tête de note (sans hampe) selon la durée.
@@ -574,15 +581,10 @@ class StaffPainter extends CustomPainter {
       final double beamSpacing = AppConstants.beamSpacing; // Espace vide SMuFL (0.25 staff space)
       final double stemLength = AppConstants.stemLength; // Longueur standard (3.5 staff space)
       
-      // Position de départ de la hampe (stemStart) avec offsets SMuFL
-      // Toutes les notes du groupe ont la même position Y (sur la ligne)
-      final double stemStartY = centerY; // La tête de note est sur la ligne
-      
-      // Position du sommet de la hampe (stemEnd) : stemStart.y + stemLength (vers le bas)
-      final double stemEndY = stemStartY + stemLength;
-      
-      // La première beam est placée exactement à stemEnd.y
-      final double beam1Y = stemEndY;
+      // Position du sommet de la hampe (stemEnd).
+      // Les hampes sont vers le bas, partent de la note et descendent de stemLength.
+      // On place la première beam à un niveau constant sous la ligne centrale.
+      final double beam1Y = centerY + stemLength;
 
       final Paint beamPaint = Paint()
         ..color = Colors.black
@@ -631,7 +633,7 @@ class StaffPainter extends CustomPainter {
         
         // Position de départ de la hampe (stemStart) avec offsets SMuFL
         final double stemStartX = note.x + AppConstants.stemDownXOffset;
-        final double stemStartY = centerY; // La tête de note est sur la ligne
+        final double stemStartY = _noteCenterY(note.event, centerY);
         
         // Pour cette note, calculer où se termine la hampe (au dernier beam)
         final int noteBeamCount = noteBeamCounts[noteIndex] ?? 1;

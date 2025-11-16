@@ -63,7 +63,7 @@ class NoteEventHelper {
       }
       
       // Pour les notes avec accent, on garde la note complète avec hampe
-      // L'accent sera indiqué visuellement (le symbole accentedNoteHead est juste une tête)
+      // L'accent sera indiqué visuellement (MusicSymbols.accent est un signe posé au-dessus)
       // Pour l'instant, on retourne la note complète avec hampe pour préserver les hampes
       // TODO: Implémenter l'affichage de l'accent au-dessus de la note
       

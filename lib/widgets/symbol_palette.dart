@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 
+typedef PaletteIconBuilder = Widget Function(
+  BuildContext context,
+  bool isActive,
+);
+
 /// Représente un symbole affiché dans la palette.
 class PaletteSymbol {
-  const PaletteSymbol({required this.label, required this.symbol});
+  const PaletteSymbol({
+    required this.label,
+    required this.symbol,
+    this.iconBuilder,
+  });
 
   final String label;
   final String symbol;
+  final PaletteIconBuilder? iconBuilder;
 }
 
 /// Palette horizontale affichant la liste des symboles musicaux disponibles.
@@ -87,14 +97,15 @@ class _PaletteButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              option.symbol,
-              style: const TextStyle(
-                fontFamily: 'Bravura',
-                fontSize: 32,
-                color: Colors.black,
-              ),
-            ),
+            option.iconBuilder?.call(context, isSelected) ??
+                Text(
+                  option.symbol,
+                  style: const TextStyle(
+                    fontFamily: 'Bravura',
+                    fontSize: 32,
+                    color: Colors.black,
+                  ),
+                ),
             const SizedBox(height: 4),
             Text(
               option.label,

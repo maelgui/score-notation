@@ -26,7 +26,8 @@ class StaffView extends StatelessWidget {
   final EditMode editMode;
   final int? selectedMeasureIndex;
   final DurationFraction? selectedPosition;
-  final Future<void> Function(int measureIndex, int eventIndex) onBeatSelected;
+  final Future<void> Function(int measureIndex, int eventIndex, bool placeAboveLine)
+      onBeatSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +94,8 @@ class StaffView extends StatelessWidget {
             
             // Si on a trouvé un symbole proche, utiliser son index
             if (closestEntryIndex != null) {
-              onBeatSelected(measureIndex, closestEntryIndex);
+              final bool placeAboveLine = localDy <= centerY;
+              onBeatSelected(measureIndex, closestEntryIndex, placeAboveLine);
             }
           },
           child: CustomPaint(

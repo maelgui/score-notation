@@ -118,6 +118,10 @@ class AppConstants {
   // Largeur approximative d'une tête de note (en pixels)
   // Selon SMuFL, une tête de note noire a une largeur d'environ 1 staff space
   static double get noteHeadWidth => 1.0 * _smuflUnit;
+
+  // Décalage vertical pour placer les notes au-dessus ou en dessous de la ligne
+  // Utilise 1 espace de portée (1 staff space)
+  static double get noteLineOffset => 1.0 * _smuflUnit;
   
   // ============================================
   // AJUSTEMENTS MANUELS (si l'affichage n'est pas correct)

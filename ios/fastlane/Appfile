@@ -1,0 +1,8 @@
+app_identifier("fr.maelgui.snarenotation") # The bundle identifier of your app
+apple_id("mael.guillossou@gmail.com") # Your Apple Developer Portal username
+
+itc_team_id("127981541") # App Store Connect Team ID
+team_id("Z52NTCW222") # Developer Portal Team ID
+
+# For more information about the Appfile, see:
+#     https://docs.fastlane.tools/advanced/#appfile

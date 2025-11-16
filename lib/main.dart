@@ -11,6 +11,7 @@ import 'utils/measure_editor.dart';
 import 'utils/music_symbols.dart';
 import 'widgets/staff_view.dart';
 import 'widgets/symbol_palette.dart';
+import 'widgets/rudiment_icon.dart';
 
 void main() {
   runApp(const SnareNotationApp());
@@ -65,11 +66,25 @@ class _StaffScreenState extends State<StaffScreen> {
     PaletteSymbol(label: 'Silence', symbol: MusicSymbols.restQuarter),
   ];
 
-  static const List<PaletteSymbol> _modificationSymbols = [
-    PaletteSymbol(label: 'Accent', symbol: MusicSymbols.accentedNoteHead),
-    PaletteSymbol(label: 'Flam', symbol: MusicSymbols.flam),
-    PaletteSymbol(label: 'Drag', symbol: MusicSymbols.drag),
-    PaletteSymbol(label: 'Roulement', symbol: MusicSymbols.roll),
+  static final List<PaletteSymbol> _modificationSymbols = [
+    const PaletteSymbol(label: 'Accent', symbol: MusicSymbols.accent),
+    PaletteSymbol(
+      label: 'Flam',
+      symbol: MusicSymbols.flam,
+      iconBuilder: (context, isActive) => RudimentIcon(
+        graceNoteCount: 1,
+        isActive: isActive,
+      ),
+    ),
+    PaletteSymbol(
+      label: 'Drag',
+      symbol: MusicSymbols.drag,
+      iconBuilder: (context, isActive) => RudimentIcon(
+        graceNoteCount: 2,
+        isActive: isActive,
+      ),
+    ),
+    const PaletteSymbol(label: 'Roulement', symbol: MusicSymbols.roll),
   ];
 
   @override
@@ -283,10 +298,15 @@ class _StaffScreenState extends State<StaffScreen> {
   }
 
 
-  Future<void> _handleAddNoteAtBeat(int measureIndex, int eventIndex) async {
+  Future<void> _handleAddNoteAtBeat(
+    int measureIndex,
+    int eventIndex,
+    bool placeAboveLine,
+  ) async {
     await _scoreController.addNoteAtBeat(
       measureIndex,
       eventIndex: eventIndex,
+      placeAboveLine: placeAboveLine,
       selectedSymbol: _selectedSymbol,
       selectedDuration: _selectedDuration,
     );
@@ -295,7 +315,11 @@ class _StaffScreenState extends State<StaffScreen> {
   }
 
   /// Gère la sélection d'une note en mode sélection.
-  Future<void> _handleSelectNote(int measureIndex, int eventIndex) async {
+  Future<void> _handleSelectNote(
+    int measureIndex,
+    int eventIndex,
+    bool placeAboveLine,
+  ) async {
     if (measureIndex < 0 || measureIndex >= _score.measures.length) {
       return;
     }
@@ -312,7 +336,7 @@ class _StaffScreenState extends State<StaffScreen> {
           _selectedPosition = eventsWithPositions[eventIndex].position;
           _selectedEventIndex = eventIndex;
         });
-      } else {
+    } else {
         // Désélectionner si on clique sur un silence
         setState(() {
           _selectedMeasureIndex = null;
@@ -335,7 +359,7 @@ class _StaffScreenState extends State<StaffScreen> {
     Accent? accent = event.accent; // Préserver l'accent existant
     Ornament? ornament = event.ornament; // Préserver l'ornement existant
 
-    if (symbol == MusicSymbols.accentedNoteHead) {
+    if (symbol == MusicSymbols.accent) {
       // Toggle accent
       accent = event.accent == Accent.accent ? null : Accent.accent;
     } else if (symbol == MusicSymbols.flam) {
@@ -415,7 +439,7 @@ class _ModificationPalette extends StatelessWidget {
               final bool isActive;
               
               // Déterminer si cet attribut est actif
-              if (option.symbol == MusicSymbols.accentedNoteHead) {
+              if (option.symbol == MusicSymbols.accent) {
                 isActive = hasAccent;
               } else if (option.symbol == MusicSymbols.flam) {
                 isActive = hasFlam;
@@ -477,15 +501,16 @@ class _ModificationPaletteButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              option.symbol,
-              style: TextStyle(
-                fontFamily: 'Bravura',
-                fontSize: 32,
-                color: isActive ? colorScheme.primary : Colors.black,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
+            option.iconBuilder?.call(context, isActive) ??
+                Text(
+                  option.symbol,
+                  style: TextStyle(
+                    fontFamily: 'Bravura',
+                    fontSize: 32,
+                    color: isActive ? colorScheme.primary : Colors.black,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
             const SizedBox(height: 4),
             Text(
               option.label,

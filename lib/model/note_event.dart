@@ -16,6 +16,7 @@ class NoteEvent {
     this.ornament,
     this.accent,
     this.isRest = false,
+    this.isAboveLine = false,
   });
 
   /// Durée de l'événement.
@@ -33,12 +34,17 @@ class NoteEvent {
   /// Indique si c'est un silence (true) ou une note (false).
   final bool isRest;
 
+  /// Indique si la note doit être placée au-dessus de la ligne centrale.
+  /// Ignoré pour les silences.
+  final bool isAboveLine;
+
   NoteEvent copyWith({
     DurationFraction? duration,
     TupletInfo? tuplet,
     Ornament? ornament,
     Accent? accent,
     bool? isRest,
+    bool? isAboveLine,
   }) {
     return NoteEvent(
       duration: duration ?? this.duration,
@@ -46,6 +52,7 @@ class NoteEvent {
       ornament: ornament ?? this.ornament,
       accent: accent ?? this.accent,
       isRest: isRest ?? this.isRest,
+      isAboveLine: isAboveLine ?? this.isAboveLine,
     );
   }
 
@@ -57,12 +64,13 @@ class NoteEvent {
         tuplet == other.tuplet &&
         ornament == other.ornament &&
         accent == other.accent &&
-        isRest == other.isRest;
+        isRest == other.isRest &&
+        isAboveLine == other.isAboveLine;
   }
 
   @override
   int get hashCode {
-    return Object.hash(duration, tuplet, ornament, accent, isRest);
+    return Object.hash(duration, tuplet, ornament, accent, isRest, isAboveLine);
   }
 
   @override
@@ -72,7 +80,8 @@ class NoteEvent {
     final String tup = tuplet != null ? ' (${tuplet.toString()})' : '';
     final String orn = ornament != null ? ' ${ornament.toString()}' : '';
     final String acc = accent != null ? ' ${accent.toString()}' : '';
-    return '$base($dur$tup$orn$acc)';
+    final String pos = isRest ? '' : (isAboveLine ? ' ↑' : ' ↓');
+    return '$base($dur$tup$orn$acc$pos)';
   }
 
   Map<String, dynamic> toJson() => {
@@ -81,6 +90,7 @@ class NoteEvent {
         if (ornament != null) 'ornament': ornament!.toJson(),
         if (accent != null) 'accent': accent!.toJson(),
         'isRest': isRest,
+        'isAboveLine': isAboveLine,
       };
 
   factory NoteEvent.fromJson(Map<String, dynamic> json) {
@@ -94,6 +104,7 @@ class NoteEvent {
       ornament: Ornament.fromJson(json['ornament'] as String?),
       accent: Accent.fromJson(json['accent'] as String?),
       isRest: json['isRest'] as bool? ?? false,
+      isAboveLine: json['isAboveLine'] as bool? ?? false,
     );
   }
 }

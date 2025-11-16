@@ -90,6 +90,7 @@ class ScoreController {
   Future<void> addNoteAtBeat(
     int measureIndex, {
     required int eventIndex,
+    required bool placeAboveLine,
     required String selectedSymbol,
     NoteDuration? selectedDuration,
   }) async {
@@ -121,6 +122,7 @@ class ScoreController {
       isRest: isRest,
       ornament: ornament,
       accent: accent,
+      isAboveLine: placeAboveLine,
     );
     
     // Insérer la note dans la mesure (remplace toujours l'événement à l'index)
