@@ -70,7 +70,7 @@ class StaffPainter extends CustomPainter {
 
     // Dessiner une barre simple au début de la partition (symbole SMuFL E030)
     final double firstMeasureStartX = measureStartXs.first;
-    _drawBarline(canvas, firstMeasureStartX, centerY);
+    _drawBarlineSymbol(canvas, MusicSymbols.barlineSingle, firstMeasureStartX, centerY);
 
     // Dessiner les barres de mesure (une seule barre entre chaque mesure) et les notes
     for (int i = 0; i < score.measures.length; i++) {
@@ -91,7 +91,7 @@ class StaffPainter extends CustomPainter {
 
       // Dessiner une barre à la fin de chaque mesure (sauf la dernière) - symbole SMuFL E030
       if (i < score.measures.length - 1) {
-        _drawBarline(canvas, measureEndX, centerY);
+        _drawBarlineSymbol(canvas, MusicSymbols.barlineSingle, measureEndX, centerY);
       }
 
       // Dessiner les notes de cette mesure
@@ -189,62 +189,40 @@ class StaffPainter extends CustomPainter {
 
     // Dessiner la double barre finale à la fin de la partition (symbole SMuFL E032)
     final double lastMeasureEndX = measureEndXs.last;
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: MusicSymbols.barlineFinal,
-        style: TextStyle(
-          fontFamily: 'Bravura',
-          fontSize: AppConstants.symbolFontSize,
-          color: Colors.black,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    
-    // Centrer verticalement : utiliser les métriques SMuFL
-    // Le symbole barlineFinal a une hauteur de 4.0 staff spaces selon les métadonnées
-    // Son point d'ancrage est en bas (y=0), donc pour centrer sur centerY :
-    // - Le centre du symbole est à 2.0 staff spaces depuis le bas
-    // - On positionne le symbole pour que son centre soit à centerY
-    final double smuflUnit = AppConstants.symbolFontSize / 4.0;
-    final double symbolHeightInStaffSpaces = 4.0; // Selon les métadonnées SMuFL
-    final double symbolCenterOffset = symbolHeightInStaffSpaces / 2.0; // 2.0 staff spaces
-    final double offsetY = centerY - (symbolCenterOffset * smuflUnit);
-    
-    final Offset offset = Offset(
+    _drawBarlineSymbol(
+      canvas,
+      MusicSymbols.barlineFinal,
       lastMeasureEndX,
-      offsetY,
+      centerY,
     );
-    
-    textPainter.paint(canvas, offset);
   }
 
-  /// Dessine une barre de mesure simple (symbole SMuFL E030)
-  void _drawBarline(Canvas canvas, double x, double centerY) {
+  /// Dessine un symbole de barre SMuFL (E030, E032, etc.)
+  void _drawBarlineSymbol(
+    Canvas canvas,
+    String symbol,
+    double x,
+    double centerY,
+  ) {
     final textPainter = TextPainter(
       text: TextSpan(
-        text: MusicSymbols.barlineSingle,
+        text: symbol,
         style: TextStyle(
           fontFamily: 'Bravura',
-          fontSize: AppConstants.symbolFontSize,
+          fontSize: AppConstants.barLineHeight,
           color: Colors.black,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    
-    // Centrer verticalement : le symbole E030 doit être centré sur la ligne
-    // Selon les métadonnées SMuFL, le symbole barlineSingle a une hauteur de ~4.0 staff spaces
-    // Son point d'ancrage est en bas, donc on centre comme pour barlineFinal
-    final double smuflUnit = AppConstants.symbolFontSize / 4.0;
-    final double symbolHeightInStaffSpaces = 4.0; // Approximatif selon SMuFL
-    final double symbolCenterOffset = symbolHeightInStaffSpaces / 2.0; // 2.0 staff spaces
-    final double offsetY = centerY - (symbolCenterOffset * smuflUnit);
-    
-    textPainter.paint(
-      canvas,
-      Offset(x, offsetY),
-    );
+
+    final double glyphHeightPx = AppConstants.barLineHeight; // 4 staff spaces
+    final double baselineDistance =
+        textPainter.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+    final double baselineY = centerY + glyphHeightPx / 2;
+    final double offsetY = baselineY - baselineDistance;
+
+    textPainter.paint(canvas, Offset(x, offsetY));
   }
 
   /// Retourne le symbole de tête de note (sans hampe) selon la durée.
