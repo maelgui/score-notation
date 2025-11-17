@@ -426,7 +426,7 @@ class _ModificationPalette extends StatelessWidget {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     return Material(
       elevation: 4,
-      color: colorScheme.surfaceVariant,
+      color: colorScheme.surfaceContainerHighest,
       child: SafeArea(
         top: false,
         child: SizedBox(

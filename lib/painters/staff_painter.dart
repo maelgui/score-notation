@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../model/score.dart';
@@ -158,6 +160,7 @@ class StaffPainter extends CustomPainter {
             Offset(x, noteCenterY),
             isSelected: isSelected,
             ornament: entry.event.ornament,
+            noteEvent: entry.event,
           );
           
           noteIndex++;
@@ -180,6 +183,7 @@ class StaffPainter extends CustomPainter {
             Offset(x, centerY),
             isSelected: isSelected,
             ornament: null,
+          noteEvent: entry.event,
           );
         }
       }
@@ -231,6 +235,25 @@ class StaffPainter extends CustomPainter {
     final double offset = AppConstants.noteLineOffset;
     return event.isAboveLine ? centerY - offset : centerY + offset;
   }
+  
+  double _oppositeHandCenterY(NoteEvent? event, double fallbackY) {
+    if (event == null || event.isRest) {
+      return fallbackY;
+    }
+    final double offset = AppConstants.noteLineOffset * 2;
+    return event.isAboveLine ? fallbackY + offset : fallbackY - offset;
+  }
+
+  double _graceNoteCenterY(NoteEvent? event, double mainCenterY) {
+    final double base = _oppositeHandCenterY(event, mainCenterY);
+    if (event == null || event.isRest) {
+      return base;
+    }
+    final bool mainAbove = event.isAboveLine;
+    final double verticalAdjust =
+        AppConstants.staffSpace * AppConstants.graceNoteVerticalOffsetFactor;
+    return mainAbove ? base + verticalAdjust : base - verticalAdjust;
+  }
 
   /// Retourne le symbole de tête de note (sans hampe) selon la durée.
   String _getNoteHeadSymbol(NoteEvent event) {
@@ -251,6 +274,7 @@ class StaffPainter extends CustomPainter {
     Offset position, {
     bool isSelected = false,
     Ornament? ornament,
+    NoteEvent? noteEvent,
   }) {
     final textPainter = TextPainter(
       text: TextSpan(
@@ -295,52 +319,80 @@ class StaffPainter extends CustomPainter {
         );
         tremoloPainter.paint(canvas, tremoloOffset);
       } else if (ornament == Ornament.flam) {
-        // Pour le flam, dessiner une croche (eighth note) de grâce juste avant la note principale
-        // La note de grâce doit toujours être une croche avec hampe vers le haut, sur la même ligne
-        final graceNoteSymbol = MusicSymbols.eighthNoteUp; // Toujours une croche
-        
-        final graceNotePainter = TextPainter(
+        // Grace note réduite (70%) positionnée sur la main inverse
+        final TextPainter graceNotePainter = TextPainter(
           text: TextSpan(
-            text: graceNoteSymbol, // Croche avec hampe vers le haut
+            text: MusicSymbols.eighthNoteUp,
             style: TextStyle(
               fontFamily: 'Bravura',
-              fontSize: AppConstants.symbolFontSize * 0.6, // Plus petite
+              fontSize: AppConstants.symbolFontSize * AppConstants.graceNoteScale,
               color: Colors.black,
             ),
           ),
           textDirection: TextDirection.ltr,
         )..layout();
         
-        // Positionner la note de grâce juste avant la note principale, sur la même ligne
-        final graceNoteOffset = Offset(
-          position.dx - graceNotePainter.width / 2 - 12, // À gauche de la note principale
-          position.dy - graceNotePainter.height / 2, // Même hauteur que la note principale (sur la ligne)
+        final double graceCenterY = _graceNoteCenterY(noteEvent, position.dy);
+        final double graceCenterX = position.dx -
+            (AppConstants.noteHeadWidth * AppConstants.graceNoteHorizontalSpacingFactor);
+        final Offset graceNoteOffset = Offset(
+          graceCenterX - graceNotePainter.width / 2,
+          graceCenterY - graceNotePainter.height / 2,
         );
         graceNotePainter.paint(canvas, graceNoteOffset);
+        
+        // Slash incliné ±30° attaché à la hampe
+        final Paint slashPaint = Paint()
+          ..color = Colors.black
+          ..strokeWidth = AppConstants.stemThickness * 0.9
+          ..strokeCap = StrokeCap.round;
+        final double slashLength =
+            AppConstants.graceSlashLengthFactor * AppConstants.stemThickness;
+        final double angleRad =
+            AppConstants.graceSlashAngleDegrees * math.pi / 180;
+        final Offset slashStart = Offset(
+          graceNoteOffset.dx + graceNotePainter.width * 0.7,
+          graceNoteOffset.dy + graceNotePainter.height * 0.25,
+        );
+        final Offset slashVector = Offset(
+          -slashLength * math.cos(angleRad),
+          slashLength * math.sin(angleRad),
+        );
+        canvas.drawLine(slashStart, slashStart + slashVector, slashPaint);
       } else if (ornament == Ornament.drag) {
-        // Pour le drag, dessiner deux double croches (sixteenth notes) avec une double ligature (2 beams)
+        // Pour le drag, dessiner deux triple croches (thirty-second notes) avec une triple ligature
         // Utiliser seulement les têtes de note (sans hampe)
-        final graceNoteHead = MusicSymbols.quarterNoteHead; // Tête noire pour double croche
+        final graceNoteHead = MusicSymbols.quarterNoteHead; // Tête noire standard
         
         final graceNotePainter = TextPainter(
           text: TextSpan(
             text: graceNoteHead, // Tête de note seulement
             style: TextStyle(
               fontFamily: 'Bravura',
-              fontSize: AppConstants.symbolFontSize * 0.6, // Plus petite
+              fontSize: AppConstants.symbolFontSize * AppConstants.graceNoteScale,
               color: Colors.black,
             ),
           ),
           textDirection: TextDirection.ltr,
         )..layout();
         
-        // Positionner deux notes de grâce juste avant la note principale, sur la même ligne
-        final double graceNote1X = position.dx - graceNotePainter.width / 2 - 18; // Première note plus à gauche
-        final double graceNote2X = position.dx - graceNotePainter.width / 2 - 8; // Deuxième note un peu à droite
-        final double graceNoteY = position.dy - graceNotePainter.height / 2; // Même hauteur que la note principale
+        final double graceCenterY = _graceNoteCenterY(noteEvent, position.dy);
+        // Positionner deux notes de grâce juste avant la note principale, sur la main inverse
+        final double baseCenterX = position.dx -
+            (AppConstants.noteHeadWidth * AppConstants.graceNoteHorizontalSpacingFactor);
+        final double spacing = graceNotePainter.width * 0.8;
+        final double firstCenterX = baseCenterX - spacing;
+        final double secondCenterX = baseCenterX;
+        final double graceNoteY = graceCenterY - graceNotePainter.height / 2;
         
-        final graceNoteOffset1 = Offset(graceNote1X, graceNoteY);
-        final graceNoteOffset2 = Offset(graceNote2X, graceNoteY);
+        final graceNoteOffset1 = Offset(
+          firstCenterX - graceNotePainter.width / 2,
+          graceNoteY,
+        );
+        final graceNoteOffset2 = Offset(
+          secondCenterX - graceNotePainter.width / 2,
+          graceNoteY,
+        );
         
         // Dessiner les têtes de note
         graceNotePainter.paint(canvas, graceNoteOffset1);
@@ -349,12 +401,12 @@ class StaffPainter extends CustomPainter {
         // Dessiner les hampes et les beams pour les deux notes de grâce
         final Paint stemPaint = Paint()
           ..color = Colors.black
-          ..strokeWidth = AppConstants.stemThickness * 0.6 // Plus fin pour les notes de grâce (60% de la taille normale)
+          ..strokeWidth = AppConstants.stemThickness * AppConstants.graceNoteScale
           ..strokeCap = StrokeCap.round;
         
         final Paint beamPaint = Paint()
           ..color = Colors.black
-          ..strokeWidth = AppConstants.beamThickness * 0.6 // Plus fin pour les notes de grâce (60% de la taille normale)
+          ..strokeWidth = AppConstants.beamThickness * AppConstants.graceNoteScale
           ..strokeCap = StrokeCap.butt; // Extrémités nettes pour les ligatures
         
         // Placement des ligatures pour notes de grâce selon les règles SMuFL
@@ -363,18 +415,24 @@ class StaffPainter extends CustomPainter {
         // 2. Calculer stemEnd : stemStart.y - stemLength (vers le haut)
         // 3. beam1Y = stemEnd.y
         // 4. beam_n_Y = beam1Y - (n - 1) * (beamThickness + beamSpacing)
-        final double graceBeamThickness = AppConstants.beamThickness * 0.6; // 60% de la taille normale
-        final double graceBeamSpacing = AppConstants.beamSpacing * 0.6; // 60% de la taille normale
-        final double graceStemLength = AppConstants.stemLength * 0.6; // 60% de la taille normale
+        final double graceBeamThickness =
+            AppConstants.beamThickness * AppConstants.graceNoteScale;
+        final double graceBeamSpacing =
+            AppConstants.beamSpacing * AppConstants.graceNoteScale;
+        final double graceStemLength =
+            AppConstants.stemLength * AppConstants.graceNoteStemScale;
+        const int graceBeamCount = 3;
+        final double beamStep = graceBeamThickness + graceBeamSpacing;
         
-        // Dessiner les hampes (à gauche de chaque note, vers le haut)
+        // Dessiner les hampes (à droite de chaque note, vers le haut)
         // Utiliser l'offset SMuFL ajusté pour les notes de grâce
-        final double graceStemOffset = AppConstants.stemDownXOffset * 0.6; // 60% de l'offset normal
-        final double stem1X = graceNote1X + graceNotePainter.width / 2 + graceStemOffset;
-        final double stem2X = graceNote2X + graceNotePainter.width / 2 + graceStemOffset;
+        final double graceStemOffset =
+            AppConstants.stemDownXOffset.abs() * AppConstants.graceNoteScale;
+        final double stem1X = firstCenterX + graceStemOffset;
+        final double stem2X = secondCenterX + graceStemOffset;
         
         // Position de départ de la hampe (stemStart) avec offsets SMuFL
-        final double stemStartY = position.dy; // La tête de note est au niveau de la note principale
+        final double stemStartY = graceCenterY; // Utiliser la position de la main inverse
         
         // Position du sommet de la hampe (stemEnd) : stemStart.y - stemLength (vers le haut)
         final double stemEndY = stemStartY - graceStemLength;
@@ -382,8 +440,8 @@ class StaffPainter extends CustomPainter {
         // La première beam est placée exactement à stemEnd.y
         final double beam1Y = stemEndY;
         
-        // Pour 2 beams, le dernier beam est à: beam1Y - (2 - 1) * (beamThickness + beamSpacing)
-        final double lastBeamY = beam1Y - (1 * (graceBeamThickness + graceBeamSpacing));
+        // Pour n beams, le dernier beam est à: beam1Y - (n - 1) * (beamThickness + beamSpacing)
+        final double lastBeamY = beam1Y - ((graceBeamCount - 1) * beamStep);
         
         canvas.drawLine(
           Offset(stem1X, stemStartY),
@@ -396,14 +454,13 @@ class StaffPainter extends CustomPainter {
           stemPaint,
         );
         
-        // Dessiner les 2 beams (double ligature) selon la formule SMuFL
+        // Dessiner les beams selon la formule SMuFL
         // beam_n_Y = beam1Y - (n - 1) * (beamThickness + beamSpacing)
         final double beamStartX = stem1X;
         final double beamEndX = stem2X;
         
-        for (int level = 0; level < 2; level++) {
-          // Formule SMuFL: beam1Y - level * (beamThickness + beamSpacing)
-          final double y = beam1Y - (level * (graceBeamThickness + graceBeamSpacing));
+        for (int level = 0; level < graceBeamCount; level++) {
+          final double y = beam1Y - (level * beamStep);
           canvas.drawLine(
             Offset(beamStartX, y),
             Offset(beamEndX, y),
@@ -571,32 +628,30 @@ class StaffPainter extends CustomPainter {
         }
       }
 
-      // Placement des ligatures selon les règles SMuFL
-      // 1. Calculer la position de départ de la hampe (stemStart) avec les offsets SMuFL
-      // 2. Calculer la position du sommet de la hampe (stemEnd) : stemStart.y + stemLength
-      // 3. La première beam est placée exactement à stemEnd.y
-      // 4. Les beams suivants : beam_n_Y = beam1Y + (n - 1) * (beamThickness + beamSpacing)
-      
+      // Placement des ligatures : on fixe le beam le plus bas à une hauteur constante,
+      // puis on empile les niveaux supplémentaires vers le haut afin que les groupes
+      // qui ont plus de ligatures ne descendent pas plus bas que les autres.
       final double beamThickness = AppConstants.beamThickness; // Épaisseur SMuFL (0.5 staff space)
       final double beamSpacing = AppConstants.beamSpacing; // Espace vide SMuFL (0.25 staff space)
       final double stemLength = AppConstants.stemLength; // Longueur standard (3.5 staff space)
+      final double beamStep = beamThickness + beamSpacing;
       
-      // Position du sommet de la hampe (stemEnd).
-      // Les hampes sont vers le bas, partent de la note et descendent de stemLength.
-      // On place la première beam à un niveau constant sous la ligne centrale.
-      final double beam1Y = centerY + stemLength;
+      // Offset manuel éventuel pour affiner la hauteur des beams vers le bas.
+      final double beamYOffset = AppConstants.beamYOffsetDownManual;
+      
+      // Hauteur du beam le plus bas (le plus éloigné de la note). Les hampes sont vers le bas,
+      // donc on part du centre de la portée + la longueur de hampe.
+      final double beamBaseY = centerY + stemLength + beamYOffset;
 
       final Paint beamPaint = Paint()
         ..color = Colors.black
         ..strokeWidth = beamThickness
         ..strokeCap = StrokeCap.butt; // Extrémités nettes pour les ligatures
       
-      // Dessiner chaque niveau de beam selon la formule SMuFL
-      // beam_n_Y = beam1Y + (n - 1) * (beamThickness + beamSpacing)
+      // Dessiner chaque niveau de beam en remontant vers la note
       for (int level = 0; level < maxBeamCount; level++) {
-        // level 0 = Beam #1, level 1 = Beam #2, etc.
-        // Formule SMuFL: beam1Y + level * (beamThickness + beamSpacing)
-        final double y = beam1Y + (level * (beamThickness + beamSpacing));
+        // level 0 = beam le plus bas, level 1 = beam juste au-dessus, etc.
+        final double y = beamBaseY - (level * beamStep);
         
         // Trouver les notes qui ont besoin de ce niveau de beam (level+1 beams ou plus)
         // Inclure toutes les notes du groupe (les silences sont inclus mais n'ont pas de beams)
@@ -608,7 +663,7 @@ class StaffPainter extends CustomPainter {
         // Le beam doit être aligné avec les hampes, pas avec le bord de la note
         // On utilise la position de la hampe (note.x + stemDownXOffset) comme référence
         final double firstStemX = notePositions[notesAtThisLevel.first].x + AppConstants.stemDownXOffset;
-        final double lastStemX = notePositions[notesAtThisLevel.last].x + AppConstants.stemDownXOffset;
+        final double lastStemX = notePositions[notesAtThisLevel.last].x + AppConstants.stemDownXOffset + AppConstants.stemThickness;
         final double startX = firstStemX;
         final double endX = lastStemX;
         
@@ -632,18 +687,13 @@ class StaffPainter extends CustomPainter {
         if (note.event.isRest) continue;
         
         // Position de départ de la hampe (stemStart) avec offsets SMuFL
-        final double stemStartX = note.x + AppConstants.stemDownXOffset;
+        final double stemStartX = note.x + AppConstants.stemDownXOffset + AppConstants.stemThickness /2 ;
         final double stemStartY = _noteCenterY(note.event, centerY);
-        
-        // Pour cette note, calculer où se termine la hampe (au dernier beam)
-        final int noteBeamCount = noteBeamCounts[noteIndex] ?? 1;
-        // Le dernier beam est à: beam1Y + (noteBeamCount - 1) * (beamThickness + beamSpacing)
-        final double lastBeamY = beam1Y + ((noteBeamCount - 1) * (beamThickness + beamSpacing));
         
         // Dessiner la hampe depuis stemStart jusqu'au dernier beam
         canvas.drawLine(
           Offset(stemStartX, stemStartY),
-          Offset(stemStartX, lastBeamY),
+          Offset(stemStartX, beamBaseY),
           stemPaint,
         );
       }

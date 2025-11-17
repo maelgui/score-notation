@@ -1,6 +1,7 @@
 import '../model/duration_fraction.dart';
 import '../model/note_event.dart';
 import '../model/measure.dart';
+import 'logger.dart';
 import 'rest_filler.dart';
 
 /// Utilitaires pour éditer une mesure avec une liste simple de notes.
@@ -67,8 +68,8 @@ class MeasureEditor {
     int index,
     NoteEvent noteEvent,
   ) {
-    print('insertNote: $measure, $index, $noteEvent');
-    print('measure.events: ${measure.events}');
+    AppLogger.debug('insertNote: $measure, $index, $noteEvent');
+    AppLogger.debug('measure.events: ${measure.events}');
     final events = List<NoteEvent>.from(measure.events);
     final newEvents = <NoteEvent>[];
     

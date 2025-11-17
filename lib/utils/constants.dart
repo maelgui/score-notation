@@ -27,6 +27,14 @@ class AppConstants {
   static const double timeSignatureFontSize = 22.0;
   static const double timeSignatureLineHeight = 1.1;
   static const double timeSignatureSpacing = 8.0;
+  
+  // === Paramètres des grace notes ===
+  static const double graceNoteScale = 0.7;
+  static const double graceNoteStemScale = 0.7;
+  static const double graceNoteHorizontalSpacingFactor = 1.2;
+  static const double graceNoteVerticalOffsetFactor = 0;
+  static const double graceSlashAngleDegrees = 30.0;
+  static const double graceSlashLengthFactor = 4.0; // Multiplicateur de stemThickness
 
   // === Dimensions de sélection ===
   static const double selectionBorderWidth = 2.0;
@@ -64,6 +72,7 @@ class AppConstants {
   // Dans SMuFL, les valeurs sont relatives à un "staff space"
   // Pour une portée standard, 1 staff space = symbolFontSize / 4
   static double get _smuflUnit => symbolFontSize / 4.0;
+  static double get staffSpace => symbolFontSize / 4.0;
   
   // Épaisseur de la hampe (en pixels, convertie depuis SMuFL)
   // Utilise la valeur depuis bravura_metadata.json si disponible, sinon valeur par défaut
@@ -113,7 +122,7 @@ class AppConstants {
   
   // Longueur standard des hampes selon SMuFL
   // stemLength = 3.5 * staffSpace
-  static double get stemLength => 3.5 * _smuflUnit;
+  static double get stemLength => 5 * _smuflUnit;
   
   // Largeur approximative d'une tête de note (en pixels)
   // Selon SMuFL, une tête de note noire a une largeur d'environ 1 staff space
@@ -121,7 +130,7 @@ class AppConstants {
 
   // Décalage vertical pour placer les notes au-dessus ou en dessous de la ligne
   // Utilise 1 espace de portée (1 staff space)
-  static double get noteLineOffset => 1.0 * _smuflUnit;
+  static double get noteLineOffset => 0.5 * _smuflUnit;
   
   // ============================================
   // AJUSTEMENTS MANUELS (si l'affichage n'est pas correct)

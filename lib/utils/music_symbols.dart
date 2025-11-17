@@ -12,7 +12,7 @@ class MusicSymbols {
   static const String quarterNoteHead = '\uE0A4'; // Notehead black (tête seule)
   
   // Rudiments
-  static const String flam = '\uE122';
+  static const String flam = '\uE560';
   static const String drag = '\uE123';
   static const String roll = '\uE221'; // Tremolo2 (roulement avec 2 barres)
   

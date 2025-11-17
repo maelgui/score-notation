@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 
+import 'logger.dart';
+
 /// Classe pour charger et utiliser les métriques SMuFL depuis bravura_metadata.json
 class BravuraMetrics {
   BravuraMetrics._();
@@ -16,9 +18,13 @@ class BravuraMetrics {
       final String jsonString = await rootBundle.loadString('assets/bravura_metadata.json');
       _metadata = json.decode(jsonString) as Map<String, dynamic>;
       _loaded = true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Si le chargement échoue, on utilise des valeurs par défaut
-      print('Erreur lors du chargement de bravura_metadata.json: $e');
+      AppLogger.error(
+        'Erreur lors du chargement de bravura_metadata.json',
+        e,
+        stackTrace,
+      );
       _loaded = false;
     }
   }
