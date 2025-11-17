@@ -10,6 +10,7 @@ import '../model/note_event.dart';
 import '../model/ornament.dart';
 import '../model/selection_state.dart';
 import '../utils/constants.dart';
+import '../utils/logger.dart';
 import '../utils/measure_editor.dart';
 import '../utils/measure_helper.dart';
 import '../utils/music_symbols.dart';
@@ -55,6 +56,8 @@ class StaffPainter extends CustomPainter {
     final double centerY = size.height / 2;
     final double availableWidth = size.width - 2 * padding;
     final double measureWidth = availableWidth / score.measures.length;
+    final double minMeasureWidth =
+        AppConstants.noteHeadWidth * AppConstants.minMeasureWidthFactor;
 
     // Calculer les positions X de chaque mesure
     final List<double> measureStartXs = [];
@@ -87,6 +90,16 @@ class StaffPainter extends CustomPainter {
     // Dessiner les barres de mesure (une seule barre entre chaque mesure) et les notes
     for (int i = 0; i < score.measures.length; i++) {
       final measure = score.measures[i];
+      final double naturalWidth = _computeNaturalWidth(measure);
+      final double requiredWidth = math.max(naturalWidth, minMeasureWidth);
+      if (measureWidth < requiredWidth) {
+        _logMeasureWidthWarning(
+          measureIndex: i,
+          actualWidth: measureWidth,
+          requiredWidth: requiredWidth,
+          naturalWidth: naturalWidth,
+        );
+      }
       final double measureStartX = measureStartXs[i];
       final double measureEndX = measureEndXs[i];
 
@@ -715,6 +728,43 @@ class StaffPainter extends CustomPainter {
   Rect? _expandSelection(Rect? current, Rect next) {
     if (current == null) return next;
     return current.expandToInclude(next);
+  }
+
+  double _computeNaturalWidth(Measure measure) {
+    final double baseUnit =
+        AppConstants.noteHeadWidth * AppConstants.noteSpacingBaseUnitFactor;
+    double totalWeight = 0;
+    for (final event in measure.events) {
+      if (event.isRest) continue;
+      totalWeight += _durationWeight(event.duration);
+    }
+    if (totalWeight <= 0) {
+      totalWeight = 1;
+    }
+    final double padding = AppConstants.noteHeadWidth;
+    return baseUnit * totalWeight + padding;
+  }
+
+  double _durationWeight(DurationFraction duration) {
+    final double durationValue = duration.toDouble();
+    if (durationValue <= 0) return 1;
+    final double quarterValue = DurationFraction.quarter.toDouble();
+    final double ratio = quarterValue / durationValue;
+    return ratio.clamp(0.25, 8.0);
+  }
+
+  void _logMeasureWidthWarning({
+    required int measureIndex,
+    required double actualWidth,
+    required double requiredWidth,
+    required double naturalWidth,
+  }) {
+    AppLogger.warning(
+      'Measure $measureIndex width ${actualWidth.toStringAsFixed(2)}px is below the '
+      'required ${requiredWidth.toStringAsFixed(2)}px (natural ${naturalWidth.toStringAsFixed(2)}px, '
+      'min ${ (AppConstants.noteHeadWidth * AppConstants.minMeasureWidthFactor).toStringAsFixed(2)}px). '
+      'Rendering unchanged.',
+    );
   }
 
   void _drawCursor(

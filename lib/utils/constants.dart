@@ -43,6 +43,8 @@ class AppConstants {
   static const double cursorWidth = 1.0;
   static const int cursorColorValue = 0xFF1565C0;
   static const int selectionFillColorValue = 0x331565C0;
+  static const double minMeasureWidthFactor = 6.0;
+  static const double noteSpacingBaseUnitFactor = 2.0;
 
   // === Dimensions des ornements ===
   static const double ornamentIndicatorRadius = 3.0;
