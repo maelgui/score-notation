@@ -63,6 +63,12 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
 
+      - name: Fastlane Match Setup
+        run: |
+          cd ios
+          bundle exec fastlane match appstore  --readonly
+        env:
+
       - name: Deploy to TestFlight
         run: |
           cd ios
