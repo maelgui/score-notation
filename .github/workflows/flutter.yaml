@@ -59,14 +59,14 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
+          ruby-version: '3.3'
 
       - name: Install Fastlane
-        run: gem install fastlane
+        run: bundle install
 
       - name: Fastlane Match Setup
         run: |
-          fastlane match appstore
+          bundle exec fastlane match appstore  --readonly
         env:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           GIT_AUTHORIZATION: ${{ secrets.MATCH_GIT_AUTH }}
@@ -74,7 +74,7 @@ jobs:
       - name: Deploy to TestFlight
         run: |
           cd ios
-          fastlane beta
+          bundle execfastlane beta
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
