@@ -66,7 +66,7 @@ jobs:
 
       - name: Fastlane Match Setup
         run: |
-          bundle exec fastlane match appstore
+          fastlane match appstore
         env:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           GIT_AUTHORIZATION: ${{ secrets.MATCH_GIT_AUTH }}
