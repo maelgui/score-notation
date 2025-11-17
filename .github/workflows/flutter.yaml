@@ -61,9 +61,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
-
-      - name: Install Fastlane
-        run: bundle install
+          bundler-cache: true
 
       - name: Fastlane Match Setup
         run: |
