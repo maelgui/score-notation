@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 import 'model/accent.dart';
-import 'model/duration_fraction.dart';
 import 'model/ornament.dart';
 import 'model/score.dart';
+import 'model/selection_state.dart';
 import 'controllers/score_controller.dart';
 import 'services/storage_service.dart';
 import 'utils/bravura_metrics.dart';
 import 'utils/measure_editor.dart';
 import 'utils/music_symbols.dart';
+import 'utils/selection_utils.dart';
 import 'widgets/staff_view.dart';
 import 'widgets/symbol_palette.dart';
 import 'widgets/rudiment_icon.dart';
@@ -58,8 +59,8 @@ class _StaffScreenState extends State<StaffScreen> {
   
   // Pour le mode sélection : stocker la note sélectionnée
   int? _selectedMeasureIndex;
-  DurationFraction? _selectedPosition;
   int? _selectedEventIndex;
+  SelectionState _selectionState = SelectionState();
 
   static const List<PaletteSymbol> _availableSymbols = [
     PaletteSymbol(label: 'Note', symbol: MusicSymbols.quarterNote),
@@ -174,8 +175,8 @@ class _StaffScreenState extends State<StaffScreen> {
                 _editMode = newSelection.first;
                 // Réinitialiser la sélection quand on change de mode
                 _selectedMeasureIndex = null;
-                _selectedPosition = null;
                 _selectedEventIndex = null;
+                _selectionState = SelectionState();
               });
             },
           ),
@@ -222,11 +223,16 @@ class _StaffScreenState extends State<StaffScreen> {
                   child: StaffView(
                     score: _score,
                     editMode: _editMode,
-                    selectedMeasureIndex: _selectedMeasureIndex,
-                    selectedPosition: _selectedPosition,
+                    cursorPosition: _selectionState.cursor,
+                    selectedNotes: _selectionState.selectedNotes,
                     onBeatSelected: _editMode == EditMode.write
                         ? _handleAddNoteAtBeat
                         : _handleSelectNote,
+                    onCursorChanged: _handleCursorChanged,
+                    onSelectionDragStart: _handleSelectionDragStart,
+                    onSelectionDragUpdate: _handleSelectionDragUpdate,
+                    onSelectionDragEnd: _handleSelectionDragEnd,
+                    onSelectionCleared: _handleSelectionCleared,
                   ),
                 ),
                 // Sélecteur de durée
@@ -328,23 +334,97 @@ class _StaffScreenState extends State<StaffScreen> {
     final measure = _score.measures[measureIndex];
     final eventsWithPositions = MeasureEditor.extractEventsWithPositions(measure);
     if (eventIndex >= 0 && eventIndex < eventsWithPositions.length) {
-      final event = eventsWithPositions[eventIndex].event;
-      // Ne sélectionner que les notes (pas les silences)
+      final entry = eventsWithPositions[eventIndex];
+      final event = entry.event;
       if (!event.isRest) {
+        final cursor = StaffCursorPosition(
+          measureIndex: measureIndex,
+          position: entry.position,
+        );
+        final selectionRef = NoteSelectionReference(
+          measureIndex: measureIndex,
+          eventIndex: eventIndex,
+        );
         setState(() {
           _selectedMeasureIndex = measureIndex;
-          _selectedPosition = eventsWithPositions[eventIndex].position;
           _selectedEventIndex = eventIndex;
+          _selectionState = SelectionState(
+            cursor: cursor,
+            range: SelectionRange(start: cursor, end: cursor),
+            selectedNotes: {selectionRef},
+          );
         });
     } else {
-        // Désélectionner si on clique sur un silence
         setState(() {
           _selectedMeasureIndex = null;
-          _selectedPosition = null;
           _selectedEventIndex = null;
+          _selectionState = SelectionState();
         });
       }
     }
+  }
+
+  void _handleCursorChanged(StaffCursorPosition cursor) {
+    if (_editMode != EditMode.select) return;
+    setState(() {
+      _selectionState = _selectionState.copyWith(cursor: cursor);
+    });
+  }
+
+  void _handleSelectionDragStart(StaffCursorPosition cursor) {
+    if (_editMode != EditMode.select) return;
+    setState(() {
+      _selectedMeasureIndex = null;
+      _selectedEventIndex = null;
+      _selectionState = SelectionState(
+        cursor: cursor,
+        range: SelectionRange(start: cursor, end: cursor),
+      );
+    });
+  }
+
+  void _handleSelectionDragUpdate(StaffCursorPosition cursor) {
+    if (_editMode != EditMode.select) return;
+    final SelectionRange range = _selectionState.range == null
+        ? SelectionRange(start: cursor, end: cursor)
+        : SelectionRange(start: _selectionState.range!.start, end: cursor);
+    final selectedNotes = SelectionUtils.notesWithinRange(_score, range);
+    setState(() {
+      _selectionState = SelectionState(
+        cursor: cursor,
+        range: range,
+        selectedNotes: selectedNotes,
+      );
+    });
+  }
+
+  void _handleSelectionDragEnd() {
+    if (_editMode != EditMode.select) return;
+    final selected = _selectionState.selectedNotes;
+    if (selected.length == 1) {
+      final ref = selected.first;
+      setState(() {
+        _selectedMeasureIndex = ref.measureIndex;
+        _selectedEventIndex = ref.eventIndex;
+      });
+    } else {
+      setState(() {
+        _selectedMeasureIndex = null;
+        _selectedEventIndex = null;
+      });
+    }
+  }
+
+  void _handleSelectionCleared() {
+    if (_editMode != EditMode.select) return;
+    setState(() {
+      _selectedMeasureIndex = null;
+      _selectedEventIndex = null;
+      _selectionState = _selectionState.copyWith(
+        clearRange: true,
+        clearSelectedNotes: true,
+      );
+    });
   }
 
   /// Gère la modification d'une note sélectionnée.

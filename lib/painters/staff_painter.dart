@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../model/score.dart';
@@ -7,25 +8,27 @@ import '../model/duration_fraction.dart';
 import '../model/measure.dart';
 import '../model/note_event.dart';
 import '../model/ornament.dart';
+import '../model/selection_state.dart';
 import '../utils/constants.dart';
 import '../utils/measure_editor.dart';
 import '../utils/measure_helper.dart';
 import '../utils/music_symbols.dart';
 import '../utils/note_event_helper.dart';
+import '../utils/selection_utils.dart';
 
 /// CustomPainter chargé de dessiner la portée avec plusieurs mesures et les symboles SMuFL.
 class StaffPainter extends CustomPainter {
   StaffPainter({
     required this.score,
     this.padding = AppConstants.staffPadding,
-    this.selectedMeasureIndex,
-    this.selectedPosition,
+    this.cursorPosition,
+    this.selectedNotes = const {},
   });
 
   final Score score;
   final double padding;
-  final int? selectedMeasureIndex;
-  final DurationFraction? selectedPosition;
+  final StaffCursorPosition? cursorPosition;
+  final Set<NoteSelectionReference> selectedNotes;
 
   // Paint objects statiques pour optimiser les performances
   static final Paint _linePaint = Paint()
@@ -37,6 +40,11 @@ class StaffPainter extends CustomPainter {
     ..color = Color(AppConstants.selectionColorValue)
     ..style = PaintingStyle.stroke
     ..strokeWidth = AppConstants.selectionBorderWidth;
+
+  static final Paint _cursorPaint = Paint()
+    ..color = Color(AppConstants.cursorColorValue)
+    ..strokeWidth = AppConstants.cursorWidth
+    ..strokeCap = StrokeCap.round;
 
   static const double defaultPadding = AppConstants.staffPadding;
 
@@ -73,6 +81,8 @@ class StaffPainter extends CustomPainter {
     // Dessiner une barre simple au début de la partition (symbole SMuFL E030)
     final double firstMeasureStartX = measureStartXs.first;
     _drawBarlineSymbol(canvas, MusicSymbols.barlineSingle, firstMeasureStartX, centerY);
+
+    Rect? selectionBounds;
 
     // Dessiner les barres de mesure (une seule barre entre chaque mesure) et les notes
     for (int i = 0; i < score.measures.length; i++) {
@@ -111,14 +121,11 @@ class StaffPainter extends CustomPainter {
       final List<({double x, NoteEvent event, DurationFraction position})> notePositions = [];
       
       for (final entry in eventsWithPositions) {
-        // Convertir la position temporelle (en noires) en position X
         final positionValue = MeasureHelper.fractionToPosition(entry.position);
         final double normalizedPosition = maxDurationValue > 0
             ? (positionValue / maxDurationValue).clamp(0.0, 1.0)
             : 0.0;
         final double x = notesStartX + normalizedPosition * notesSpan;
-        
-        // Stocker la position pour les beams (seulement les notes, pas les silences)
         notePositions.add((x: x, event: entry.event, position: entry.position));
       }
       
@@ -131,65 +138,68 @@ class StaffPainter extends CustomPainter {
       
       // Dessiner les notes
       int noteIndex = 0;
-      for (final entry in eventsWithPositions) {
-        if (!entry.event.isRest) {
-          // Convertir la position temporelle (en noires) en position X
+      for (int eventIndex = 0; eventIndex < eventsWithPositions.length; eventIndex++) {
+        final entry = eventsWithPositions[eventIndex];
           final positionValue = MeasureHelper.fractionToPosition(entry.position);
           final double normalizedPosition = maxDurationValue > 0
               ? (positionValue / maxDurationValue).clamp(0.0, 1.0)
               : 0.0;
           final double x = notesStartX + normalizedPosition * notesSpan;
-          
-          // Vérifier si cette note est sélectionnée
-          final isSelected = selectedMeasureIndex == i && 
-              selectedPosition != null &&
-              entry.position.reduce() == selectedPosition!.reduce();
-          
-          // Si la note fait partie d'un groupe beamed, utiliser seulement la tête de note
-          // (mais seulement si c'est une note, pas un silence)
-          final bool isBeamed = beamedNoteIndices.contains(noteIndex) && !entry.event.isRest;
+        final reference = NoteSelectionReference(
+          measureIndex: i,
+          eventIndex: eventIndex,
+        );
+        final bool isSelected = selectedNotes.contains(reference);
+
+        if (!entry.event.isRest) {
+          final bool isBeamed = beamedNoteIndices.contains(noteIndex);
           final String symbol = isBeamed 
               ? _getNoteHeadSymbol(entry.event)
               : NoteEventHelper.getSymbol(entry.event);
           
-          // Dessiner la note avec indication d'ornement si présent
           final double noteCenterY = _noteCenterY(entry.event, centerY);
-          _drawSymbol(
+          final Rect symbolBounds = _drawSymbol(
             canvas,
             symbol,
             Offset(x, noteCenterY),
-            isSelected: isSelected,
             ornament: entry.event.ornament,
             noteEvent: entry.event,
           );
           
+          if (isSelected) {
+            selectionBounds = _expandSelection(selectionBounds, symbolBounds);
+          }
+          
           noteIndex++;
         } else {
-          // Pour les silences, dessiner normalement
-          final positionValue = MeasureHelper.fractionToPosition(entry.position);
-          final double normalizedPosition = maxDurationValue > 0
-              ? (positionValue / maxDurationValue).clamp(0.0, 1.0)
-              : 0.0;
-          final double x = notesStartX + normalizedPosition * notesSpan;
           final String symbol = NoteEventHelper.getSymbol(entry.event);
           
-          final isSelected = selectedMeasureIndex == i && 
-              selectedPosition != null &&
-              entry.position.reduce() == selectedPosition!.reduce();
-          
-          _drawSymbol(
+          final Rect symbolBounds = _drawSymbol(
             canvas,
             symbol,
             Offset(x, centerY),
-            isSelected: isSelected,
             ornament: null,
           noteEvent: entry.event,
           );
+
+          if (isSelected) {
+            selectionBounds = _expandSelection(selectionBounds, symbolBounds);
+          }
         }
       }
       
       // Dessiner les beams et les hampes manuelles entre les notes groupées
       _drawBeams(canvas, notePositions, beamGroups, centerY, notesStartX, notesEndX);
+    }
+
+    final bounds = selectionBounds;
+    if (bounds != null) {
+      _drawSelectionBounds(canvas, bounds);
+    }
+
+    final cursor = cursorPosition;
+    if (cursor != null) {
+      _drawCursor(canvas, size, cursor, measureStartXs, measureEndXs);
     }
 
     // Dessiner la double barre finale à la fin de la partition (symbole SMuFL E032)
@@ -268,11 +278,10 @@ class StaffPainter extends CustomPainter {
     }
   }
 
-  void _drawSymbol(
+  Rect _drawSymbol(
     Canvas canvas, 
     String symbol, 
     Offset position, {
-    bool isSelected = false,
     Ornament? ornament,
     NoteEvent? noteEvent,
   }) {
@@ -294,6 +303,13 @@ class StaffPainter extends CustomPainter {
     );
 
     textPainter.paint(canvas, offset);
+
+    final Rect selectionRect = Rect.fromLTWH(
+      offset.dx - AppConstants.selectionPadding,
+      offset.dy - AppConstants.selectionPadding,
+      textPainter.width + AppConstants.selectionPadding * 2,
+      textPainter.height + AppConstants.selectionPadding * 2,
+    );
 
     // Si un ornement est présent, dessiner le symbole approprié
     if (ornament != null) {
@@ -470,19 +486,7 @@ class StaffPainter extends CustomPainter {
       }
     }
 
-    // Dessiner un contour autour de la note si elle est sélectionnée
-    if (isSelected) {
-      final rect = Rect.fromLTWH(
-        offset.dx - AppConstants.selectionPadding,
-        offset.dy - AppConstants.selectionPadding,
-        textPainter.width + AppConstants.selectionPadding * 2,
-        textPainter.height + AppConstants.selectionPadding * 2,
-      );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(AppConstants.selectionBorderRadius)),
-        _selectionPaint,
-      );
-    }
+    return selectionRect;
   }
 
   /// Trouve les groupes de notes consécutives qui doivent être beamed.
@@ -700,6 +704,56 @@ class StaffPainter extends CustomPainter {
     }
   }
 
+  void _drawSelectionBounds(Canvas canvas, Rect bounds) {
+    final rrect = RRect.fromRectAndRadius(
+      bounds,
+      const Radius.circular(AppConstants.selectionBorderRadius),
+    );
+    canvas.drawRRect(rrect, _selectionPaint);
+  }
+
+  Rect? _expandSelection(Rect? current, Rect next) {
+    if (current == null) return next;
+    return current.expandToInclude(next);
+  }
+
+  void _drawCursor(
+    Canvas canvas,
+    Size size,
+    StaffCursorPosition cursor,
+    List<double> measureStartXs,
+    List<double> measureEndXs,
+  ) {
+    final int index = cursor.measureIndex;
+    if (index < 0 || index >= score.measures.length) return;
+    if (index >= measureStartXs.length || index >= measureEndXs.length) return;
+
+    final measure = score.measures[index];
+    final double measureStartX = measureStartXs[index];
+    final double measureEndX = measureEndXs[index];
+    final double notesStartX = measureStartX + AppConstants.spaceBeforeBarline;
+    final double notesEndX = measureEndX - AppConstants.spaceBeforeBarline;
+    final double notesSpan = notesEndX - notesStartX;
+    if (notesSpan <= 0) return;
+
+    final double normalized = SelectionUtils.positionToNormalizedX(
+      position: cursor.position,
+      maxDuration: measure.maxDuration,
+    );
+    final double cursorX = notesStartX + normalized * notesSpan;
+
+    final double centerY = size.height / 2;
+    final double extent = AppConstants.staffSpace * 2.5;
+    final double top = (centerY - extent).clamp(0.0, size.height);
+    final double bottom = (centerY + extent).clamp(0.0, size.height);
+
+    canvas.drawLine(
+      Offset(cursorX, top),
+      Offset(cursorX, bottom),
+      _cursorPaint,
+    );
+  }
+
   void _drawTimeSignature(
     Canvas canvas,
     double centerY,
@@ -826,7 +880,7 @@ class StaffPainter extends CustomPainter {
   bool shouldRepaint(covariant StaffPainter oldDelegate) {
     return oldDelegate.score != score || 
            oldDelegate.padding != padding ||
-           oldDelegate.selectedMeasureIndex != selectedMeasureIndex ||
-           oldDelegate.selectedPosition != selectedPosition;
+           oldDelegate.cursorPosition != cursorPosition ||
+           !setEquals(oldDelegate.selectedNotes, selectedNotes);
   }
 }
