@@ -69,7 +69,7 @@ jobs:
           bundle exec fastlane match appstore  --readonly
         env:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: $ {{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
 
       - name: Deploy to TestFlight
         run: |
