@@ -15,6 +15,7 @@ class AppConstants {
   static const double staffPadding = 24.0;
   static const double barSpacing = 8.0;
   static const double barLineHeight = 28.0;
+  static const double staffSpacing = 80.0; // Espacement vertical entre les portées
   
   // Espacement avant la barre de mesure selon SMuFL
   // spaceBeforeBarline ≈ 0.25 × noteheadWidth

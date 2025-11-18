@@ -53,76 +53,109 @@ class StaffPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (score.measures.isEmpty) return;
 
-    final double centerY = size.height / 2;
     final double availableWidth = size.width - 2 * padding;
-    final double measureWidth = availableWidth / score.measures.length;
     final double minMeasureWidth =
         AppConstants.noteHeadWidth * AppConstants.minMeasureWidthFactor;
+    final double staffSpacing = AppConstants.staffSpacing;
 
-    // Calculer les positions X de chaque mesure
-    final List<double> measureStartXs = [];
-    final List<double> measureEndXs = [];
-    double currentX = padding;
-    
-    for (int i = 0; i < score.measures.length; i++) {
-      final double measureStartX = currentX;
-      final double measureEndX = currentX + measureWidth - AppConstants.barSpacing;
-      measureStartXs.add(measureStartX);
-      measureEndXs.add(measureEndX);
-      currentX = measureEndX + AppConstants.barSpacing;
-    }
-    
-    // Dessiner la ligne de portée continue sur toute la largeur
-    final double staffStartX = measureStartXs.first;
-    final double staffEndX = measureEndXs.last;
-    canvas.drawLine(
-      Offset(staffStartX, centerY),
-      Offset(staffEndX, centerY),
-      _linePaint,
+    // Calculer la répartition des mesures sur plusieurs portées
+    final List<List<int>> staffMeasures = _distributeMeasuresAcrossStaffs(
+      availableWidth: availableWidth,
+      minMeasureWidth: minMeasureWidth,
     );
 
-    // Dessiner une barre simple au début de la partition (symbole SMuFL E030)
-    final double firstMeasureStartX = measureStartXs.first;
-    _drawBarlineSymbol(canvas, MusicSymbols.barlineSingle, firstMeasureStartX, centerY);
+    // Calculer la position Y de départ pour la première portée
+    final int totalStaffs = staffMeasures.length;
+    final double totalHeight = totalStaffs * staffSpacing;
+    final double startY = (size.height - totalHeight) / 2 + staffSpacing / 2;
 
     Rect? selectionBounds;
+    
+    // Stocker les informations de layout pour chaque portée (pour le curseur)
+    final List<({
+      int staffIndex,
+      double staffY,
+      List<double> measureStartXs,
+      List<double> measureEndXs,
+      List<int> measureIndices,
+    })> staffLayouts = [];
 
-    // Dessiner les barres de mesure (une seule barre entre chaque mesure) et les notes
-    for (int i = 0; i < score.measures.length; i++) {
-      final measure = score.measures[i];
-      final double naturalWidth = _computeNaturalWidth(measure);
-      final double requiredWidth = math.max(naturalWidth, minMeasureWidth);
-      if (measureWidth < requiredWidth) {
-        _logMeasureWidthWarning(
-          measureIndex: i,
-          actualWidth: measureWidth,
-          requiredWidth: requiredWidth,
-          naturalWidth: naturalWidth,
-        );
-      }
-      final double measureStartX = measureStartXs[i];
-      final double measureEndX = measureEndXs[i];
+    // Dessiner chaque portée
+    for (int staffIndex = 0; staffIndex < staffMeasures.length; staffIndex++) {
+      final staffMeasureIndices = staffMeasures[staffIndex];
+      if (staffMeasureIndices.isEmpty) continue;
 
-      // Dessiner la signature rythmique uniquement pour la première mesure
-      if (i == 0) {
-        _drawTimeSignature(
-          canvas,
-          centerY,
-          measureStartX,
-          measure.timeSignature.numerator,
-          measure.timeSignature.denominator,
-        );
+      final double staffY = startY + staffIndex * staffSpacing;
+
+      // Calculer les positions X des mesures pour cette portée
+      final List<double> measureStartXs = [];
+      final List<double> measureEndXs = [];
+      double currentX = padding;
+
+      for (final measureIndex in staffMeasureIndices) {
+        final measure = score.measures[measureIndex];
+        final double naturalWidth = _computeNaturalWidth(measure);
+        final double requiredWidth = math.max(naturalWidth, minMeasureWidth);
+        final double measureWidth = requiredWidth;
+
+        final double measureStartX = currentX;
+        final double measureEndX = currentX + measureWidth;
+        measureStartXs.add(measureStartX);
+        measureEndXs.add(measureEndX);
+        currentX = measureEndX + AppConstants.barSpacing;
       }
 
-      // Dessiner une barre à la fin de chaque mesure (sauf la dernière) - symbole SMuFL E030
-      if (i < score.measures.length - 1) {
-        _drawBarlineSymbol(canvas, MusicSymbols.barlineSingle, measureEndX, centerY);
-      }
+      // Stocker le layout de cette portée pour le curseur
+      staffLayouts.add((
+        staffIndex: staffIndex,
+        staffY: staffY,
+        measureStartXs: List.from(measureStartXs),
+        measureEndXs: List.from(measureEndXs),
+        measureIndices: List.from(staffMeasureIndices),
+      ));
 
-      // Afficher un '+' si la mesure a besoin de plus de place
-      if (measureWidth < requiredWidth) {
-        _drawMeasureWidthIndicator(canvas, measureEndX, centerY);
-      }
+      // Dessiner la ligne de portée
+      final double staffStartX = measureStartXs.first;
+      final double staffEndX = measureEndXs.last;
+      canvas.drawLine(
+        Offset(staffStartX, staffY),
+        Offset(staffEndX, staffY),
+        _linePaint,
+      );
+
+      // Dessiner une barre simple au début de la portée (symbole SMuFL E030)
+      _drawBarlineSymbol(canvas, MusicSymbols.barlineSingle, staffStartX, staffY);
+
+      // Dessiner les mesures de cette portée
+      for (int localIndex = 0; localIndex < staffMeasureIndices.length; localIndex++) {
+        final int measureIndex = staffMeasureIndices[localIndex];
+        final measure = score.measures[measureIndex];
+        final double measureStartX = measureStartXs[localIndex];
+        final double measureEndX = measureEndXs[localIndex];
+
+        // Dessiner la signature rythmique uniquement pour la première mesure de la première portée
+        if (measureIndex == 0) {
+          _drawTimeSignature(
+            canvas,
+            staffY,
+            measureStartX,
+            measure.timeSignature.numerator,
+            measure.timeSignature.denominator,
+          );
+        }
+
+        // Dessiner une barre à la fin de chaque mesure (sauf la dernière de la portée)
+        if (localIndex < staffMeasureIndices.length - 1) {
+          _drawBarlineSymbol(canvas, MusicSymbols.barlineSingle, measureEndX, staffY);
+        }
+
+        // Afficher un '+' si la mesure a besoin de plus de place
+        final double naturalWidth = _computeNaturalWidth(measure);
+        final double requiredWidth = math.max(naturalWidth, minMeasureWidth);
+        final double actualWidth = measureEndX - measureStartX;
+        if (actualWidth < requiredWidth) {
+          _drawMeasureWidthIndicator(canvas, measureEndX, staffY);
+        }
 
       // Dessiner les notes de cette mesure
       // Zone disponible pour les notes (avec espacement SMuFL avant les barres)
@@ -164,7 +197,7 @@ class StaffPainter extends CustomPainter {
               : 0.0;
           final double x = notesStartX + normalizedPosition * notesSpan;
         final reference = NoteSelectionReference(
-          measureIndex: i,
+          measureIndex: measureIndex,
           eventIndex: eventIndex,
         );
         final bool isSelected = selectedNotes.contains(reference);
@@ -175,7 +208,7 @@ class StaffPainter extends CustomPainter {
               ? _getNoteHeadSymbol(entry.event)
               : NoteEventHelper.getSymbol(entry.event);
           
-          final double noteCenterY = _noteCenterY(entry.event, centerY);
+          final double noteCenterY = _noteCenterY(entry.event, staffY);
           final Rect symbolBounds = _drawSymbol(
             canvas,
             symbol,
@@ -195,7 +228,7 @@ class StaffPainter extends CustomPainter {
           final Rect symbolBounds = _drawSymbol(
             canvas,
             symbol,
-            Offset(x, centerY),
+            Offset(x, staffY),
             ornament: null,
           noteEvent: entry.event,
           );
@@ -206,8 +239,20 @@ class StaffPainter extends CustomPainter {
         }
       }
       
-      // Dessiner les beams et les hampes manuelles entre les notes groupées
-      _drawBeams(canvas, notePositions, beamGroups, centerY, notesStartX, notesEndX);
+        // Dessiner les beams et les hampes manuelles entre les notes groupées
+        _drawBeams(canvas, notePositions, beamGroups, staffY, notesStartX, notesEndX);
+      }
+
+      // Dessiner la double barre finale à la fin de la dernière portée
+      if (staffIndex == staffMeasures.length - 1) {
+        final double lastMeasureEndX = measureEndXs.last;
+        _drawBarlineSymbol(
+          canvas,
+          MusicSymbols.barlineFinal,
+          lastMeasureEndX,
+          staffY,
+        );
+      }
     }
 
     final bounds = selectionBounds;
@@ -215,19 +260,51 @@ class StaffPainter extends CustomPainter {
       _drawSelectionBounds(canvas, bounds);
     }
 
+    // Dessiner le curseur en utilisant les layouts calculés
     final cursor = cursorPosition;
     if (cursor != null) {
-      _drawCursor(canvas, size, cursor, measureStartXs, measureEndXs);
+      _drawCursorForMultiStaff(
+        canvas,
+        size,
+        cursor,
+        staffLayouts,
+      );
+    }
+  }
+
+  /// Répartit les mesures sur plusieurs portées selon la largeur disponible.
+  List<List<int>> _distributeMeasuresAcrossStaffs({
+    required double availableWidth,
+    required double minMeasureWidth,
+  }) {
+    final List<List<int>> staffMeasures = [];
+    List<int> currentStaff = [];
+    double currentWidth = 0.0;
+
+    for (int i = 0; i < score.measures.length; i++) {
+      final measure = score.measures[i];
+      final double naturalWidth = _computeNaturalWidth(measure);
+      final double requiredWidth = math.max(naturalWidth, minMeasureWidth);
+      final double measureWidthWithSpacing = requiredWidth + AppConstants.barSpacing;
+
+      // Vérifier si la mesure rentre sur la portée actuelle
+      if (currentWidth + measureWidthWithSpacing > availableWidth && currentStaff.isNotEmpty) {
+        // Passer à la portée suivante
+        staffMeasures.add(List.from(currentStaff));
+        currentStaff = [];
+        currentWidth = 0.0;
+      }
+
+      currentStaff.add(i);
+      currentWidth += measureWidthWithSpacing;
     }
 
-    // Dessiner la double barre finale à la fin de la partition (symbole SMuFL E032)
-    final double lastMeasureEndX = measureEndXs.last;
-    _drawBarlineSymbol(
-      canvas,
-      MusicSymbols.barlineFinal,
-      lastMeasureEndX,
-      centerY,
-    );
+    // Ajouter la dernière portée
+    if (currentStaff.isNotEmpty) {
+      staffMeasures.add(currentStaff);
+    }
+
+    return staffMeasures;
   }
 
   /// Dessine un symbole de barre SMuFL (E030, E032, etc.)
@@ -790,20 +867,48 @@ class StaffPainter extends CustomPainter {
     );
   }
 
-  void _drawCursor(
+  /// Dessine le curseur en tenant compte de plusieurs portées.
+  /// Utilise les layouts pré-calculés pour garantir la cohérence.
+  void _drawCursorForMultiStaff(
     Canvas canvas,
     Size size,
     StaffCursorPosition cursor,
-    List<double> measureStartXs,
-    List<double> measureEndXs,
+    List<({
+      int staffIndex,
+      double staffY,
+      List<double> measureStartXs,
+      List<double> measureEndXs,
+      List<int> measureIndices,
+    })> staffLayouts,
   ) {
-    final int index = cursor.measureIndex;
-    if (index < 0 || index >= score.measures.length) return;
-    if (index >= measureStartXs.length || index >= measureEndXs.length) return;
+    final int measureIndex = cursor.measureIndex;
+    if (measureIndex < 0 || measureIndex >= score.measures.length) return;
 
-    final measure = score.measures[index];
-    final double measureStartX = measureStartXs[index];
-    final double measureEndX = measureEndXs[index];
+    // Trouver sur quelle portée se trouve cette mesure
+    ({
+      int staffIndex,
+      double staffY,
+      List<double> measureStartXs,
+      List<double> measureEndXs,
+      List<int> measureIndices,
+    })? targetLayout;
+    int? localMeasureIndex;
+    
+    for (final layout in staffLayouts) {
+      final localIndex = layout.measureIndices.indexOf(measureIndex);
+      if (localIndex != -1) {
+        targetLayout = layout;
+        localMeasureIndex = localIndex;
+        break;
+      }
+    }
+
+    if (targetLayout == null || localMeasureIndex == null) return;
+
+    // Utiliser les positions exactes calculées lors du dessin
+    final measure = score.measures[measureIndex];
+    final double measureStartX = targetLayout.measureStartXs[localMeasureIndex];
+    final double measureEndX = targetLayout.measureEndXs[localMeasureIndex];
     final double notesStartX = measureStartX + AppConstants.spaceBeforeBarline;
     final double notesEndX = measureEndX - AppConstants.spaceBeforeBarline;
     final double notesSpan = notesEndX - notesStartX;
@@ -815,10 +920,9 @@ class StaffPainter extends CustomPainter {
     );
     final double cursorX = notesStartX + normalized * notesSpan;
 
-    final double centerY = size.height / 2;
     final double extent = AppConstants.staffSpace * 2.5;
-    final double top = (centerY - extent).clamp(0.0, size.height);
-    final double bottom = (centerY + extent).clamp(0.0, size.height);
+    final double top = (targetLayout.staffY - extent).clamp(0.0, size.height);
+    final double bottom = (targetLayout.staffY + extent).clamp(0.0, size.height);
 
     canvas.drawLine(
       Offset(cursorX, top),
