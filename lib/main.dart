@@ -52,7 +52,7 @@ class _StaffScreenState extends State<StaffScreen> {
   late final ScoreController _scoreController;
 
   Score get _score => _scoreController.score;
-  String _selectedSymbol = MusicSymbols.quarterNote;
+  SelectedSymbol _selectedSymbol = SelectedSymbol.right;
   NoteDuration? _selectedDuration = NoteDuration.quarter;
   bool _isLoading = true;
   EditMode _editMode = EditMode.write;
@@ -62,15 +62,17 @@ class _StaffScreenState extends State<StaffScreen> {
   int? _selectedEventIndex;
   SelectionState _selectionState = SelectionState();
 
-  static const List<PaletteSymbol> _availableSymbols = [
-    PaletteSymbol(label: 'Note', symbol: MusicSymbols.quarterNote),
-    PaletteSymbol(label: 'Silence', symbol: MusicSymbols.restQuarter),
+  static const List<PaletteSymbol<SelectedSymbol>> _availableSymbols = [
+    PaletteSymbol(label: 'Droite', id: SelectedSymbol.right, symbol: MusicSymbols.quarterNote),
+    PaletteSymbol(label: 'Gauche', id: SelectedSymbol.left, symbol: MusicSymbols.quarterNoteUp),
+    PaletteSymbol(label: 'Silence', id: SelectedSymbol.rest, symbol: MusicSymbols.restQuarter),
   ];
 
-  static final List<PaletteSymbol> _modificationSymbols = [
-    const PaletteSymbol(label: 'Accent', symbol: MusicSymbols.accent),
+  static final List<PaletteSymbol<ModificationSymbol>> _modificationSymbols = [
+    const PaletteSymbol(label: 'Accent', id: ModificationSymbol.accent, symbol: MusicSymbols.accent),
     PaletteSymbol(
       label: 'Flam',
+      id: ModificationSymbol.flam,
       symbol: MusicSymbols.flam,
       iconBuilder: (context, isActive) => RudimentIcon(
         graceNoteCount: 1,
@@ -79,13 +81,14 @@ class _StaffScreenState extends State<StaffScreen> {
     ),
     PaletteSymbol(
       label: 'Drag',
+      id: ModificationSymbol.drag,
       symbol: MusicSymbols.drag,
       iconBuilder: (context, isActive) => RudimentIcon(
         graceNoteCount: 2,
         isActive: isActive,
       ),
     ),
-    const PaletteSymbol(label: 'Roulement', symbol: MusicSymbols.roll),
+    const PaletteSymbol(label: 'Roulement', id: ModificationSymbol.roll, symbol: MusicSymbols.roll),
   ];
 
   @override
@@ -289,7 +292,7 @@ class _StaffScreenState extends State<StaffScreen> {
                     ],
                   ),
                 // Palette de symboles (mode écriture ou sélection sans note sélectionnée)
-                SymbolPalette(
+                SymbolPalette<SelectedSymbol>(
                   symbols: _availableSymbols,
                   selectedSymbol: _selectedSymbol,
                   onSymbolSelected: (symbol) {
@@ -312,7 +315,6 @@ class _StaffScreenState extends State<StaffScreen> {
     await _scoreController.addNoteAtBeat(
       measureIndex,
       eventIndex: eventIndex,
-      placeAboveLine: placeAboveLine,
       selectedSymbol: _selectedSymbol,
       selectedDuration: _selectedDuration,
     );
@@ -476,7 +478,7 @@ class _ModificationPalette extends StatelessWidget {
     required this.onSymbolSelected,
   });
 
-  final List<PaletteSymbol> symbols;
+  final List<PaletteSymbol<ModificationSymbol>> symbols;
   final int selectedMeasureIndex;
   final int selectedEventIndex;
   final Score score;

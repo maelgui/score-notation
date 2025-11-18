@@ -11,6 +11,12 @@ import '../utils/constants.dart';
 import '../utils/duration_converter.dart';
 import '../utils/music_symbols.dart';
 
+
+enum SelectedSymbol { right, left, rest }
+
+enum ModificationSymbol { accent, flam, drag, roll }
+
+
 /// Contrôleur pour gérer la logique métier de la partition.
 /// 
 /// Extrait toute la logique de manipulation de la partition du widget UI.
@@ -90,8 +96,7 @@ class ScoreController {
   Future<void> addNoteAtBeat(
     int measureIndex, {
     required int eventIndex,
-    required bool placeAboveLine,
-    required String selectedSymbol,
+    required SelectedSymbol selectedSymbol,
     NoteDuration? selectedDuration,
   }) async {
     if (measureIndex < 0 || measureIndex >= _score.measures.length) {
@@ -110,7 +115,8 @@ class ScoreController {
         ? DurationConverter.toFraction(selectedDuration)
         : DurationFraction.quarter;
     
-    final bool isRest = selectedSymbol == MusicSymbols.restQuarter;
+    final bool isRest = selectedSymbol == SelectedSymbol.rest;
+    final bool placeAboveLine = selectedSymbol == SelectedSymbol.right;
     
     // Pas d'ornement ni d'accent
     final Ornament? ornament = null;

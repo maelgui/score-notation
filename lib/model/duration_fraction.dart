@@ -100,6 +100,19 @@ class DurationFraction {
     return DurationFraction(newNumerator, commonDenominator).reduce();
   }
 
+  /// Divise cette fraction par une autre.
+  /// Retourne DurationFraction(0, 1) si le diviseur est zéro.
+  DurationFraction divide(DurationFraction other) {
+    if (other.numerator == 0) {
+      return const DurationFraction(0, 1);
+    }
+    // Division : (a/b) / (c/d) = (a/b) * (d/c) = (a*d) / (b*c)
+    return DurationFraction(
+      numerator * other.denominator,
+      denominator * other.numerator,
+    ).reduce();
+  }
+
   /// Convertit la fraction en double (pour calculs optionnels).
   double toDouble() => numerator / denominator;
 

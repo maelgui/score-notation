@@ -119,6 +119,11 @@ class StaffPainter extends CustomPainter {
         _drawBarlineSymbol(canvas, MusicSymbols.barlineSingle, measureEndX, centerY);
       }
 
+      // Afficher un '+' si la mesure a besoin de plus de place
+      if (measureWidth < requiredWidth) {
+        _drawMeasureWidthIndicator(canvas, measureEndX, centerY);
+      }
+
       // Dessiner les notes de cette mesure
       // Zone disponible pour les notes (avec espacement SMuFL avant les barres)
       final double notesStartX = measureStartX + AppConstants.spaceBeforeBarline;
@@ -731,26 +736,14 @@ class StaffPainter extends CustomPainter {
   }
 
   double _computeNaturalWidth(Measure measure) {
-    final double baseUnit =
-        AppConstants.noteHeadWidth * AppConstants.noteSpacingBaseUnitFactor;
-    double totalWeight = 0;
-    for (final event in measure.events) {
-      if (event.isRest) continue;
-      totalWeight += _durationWeight(event.duration);
-    }
-    if (totalWeight <= 0) {
-      totalWeight = 1;
-    }
-    final double padding = AppConstants.noteHeadWidth;
-    return baseUnit * totalWeight + padding;
-  }
-
-  double _durationWeight(DurationFraction duration) {
-    final double durationValue = duration.toDouble();
-    if (durationValue <= 0) return 1;
-    final double quarterValue = DurationFraction.quarter.toDouble();
-    final double ratio = quarterValue / durationValue;
-    return ratio.clamp(0.25, 8.0);
+    // Find the smallest subdivision of the measure
+    final smallestSubdivision = measure.events.reduce((a, b) => a.duration.reduce() < b.duration.reduce() ? a : b).duration.reduce();
+    // Compute the equivalent number of this subdivision in the measure
+    // Use division on DurationFraction, then convert to int
+    final DurationFraction divisionResult = measure.totalDuration.reduce().divide(smallestSubdivision.reduce());
+    final int equivalentNumberOfSubdivisions = (divisionResult.toDouble()).round();
+    final double smallestSubdivisionWidth = AppConstants.noteHeadWidth * 1.5;
+    return equivalentNumberOfSubdivisions * smallestSubdivisionWidth + AppConstants.spaceBeforeBarline * 2;
   }
 
   void _logMeasureWidthWarning({
@@ -764,6 +757,36 @@ class StaffPainter extends CustomPainter {
       'required ${requiredWidth.toStringAsFixed(2)}px (natural ${naturalWidth.toStringAsFixed(2)}px, '
       'min ${ (AppConstants.noteHeadWidth * AppConstants.minMeasureWidthFactor).toStringAsFixed(2)}px). '
       'Rendering unchanged.',
+    );
+  }
+
+  /// Dessine un indicateur '+' au-dessus de la fin de la mesure pour indiquer
+  /// qu'elle a besoin de plus de place.
+  void _drawMeasureWidthIndicator(Canvas canvas, double measureEndX, double centerY) {
+    // Position du '+' : au-dessus de la fin de la mesure
+    // Utiliser une taille de police plus petite que les symboles musicaux
+    final double indicatorSize = AppConstants.symbolFontSize * 0.5;
+    final double indicatorY = centerY - AppConstants.staffSpace * 3; // Au-dessus de la portée
+    
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: '+',
+        style: TextStyle(
+          fontFamily: 'Arial', // Utiliser une police standard pour le '+'
+          fontSize: indicatorSize,
+          color: Colors.orange, // Couleur orange pour attirer l'attention
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    // Centrer le '+' horizontalement sur la position X de fin de mesure
+    final double indicatorX = measureEndX - textPainter.width / 2;
+    
+    textPainter.paint(
+      canvas,
+      Offset(indicatorX, indicatorY - textPainter.height / 2),
     );
   }
 

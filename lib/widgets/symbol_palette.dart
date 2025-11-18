@@ -6,20 +6,22 @@ typedef PaletteIconBuilder = Widget Function(
 );
 
 /// Représente un symbole affiché dans la palette.
-class PaletteSymbol {
+class PaletteSymbol<T extends Enum> {
   const PaletteSymbol({
     required this.label,
     required this.symbol,
+    required this.id,
     this.iconBuilder,
   });
 
   final String label;
   final String symbol;
+  final T id;
   final PaletteIconBuilder? iconBuilder;
 }
 
 /// Palette horizontale affichant la liste des symboles musicaux disponibles.
-class SymbolPalette extends StatelessWidget {
+class SymbolPalette<T extends Enum> extends StatelessWidget {
   const SymbolPalette({
     super.key,
     required this.symbols,
@@ -27,9 +29,9 @@ class SymbolPalette extends StatelessWidget {
     required this.onSymbolSelected,
   });
 
-  final List<PaletteSymbol> symbols;
-  final String selectedSymbol;
-  final ValueChanged<String> onSymbolSelected;
+  final List<PaletteSymbol<T>> symbols;
+  final T selectedSymbol;
+  final ValueChanged<T> onSymbolSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +47,12 @@ class SymbolPalette extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             scrollDirection: Axis.horizontal,
             itemBuilder: (context, index) {
-              final PaletteSymbol option = symbols[index];
-              final bool isSelected = option.symbol == selectedSymbol;
+              final PaletteSymbol<T> option = symbols[index];
+              final bool isSelected = option.id == selectedSymbol;
               return _PaletteButton(
                 option: option,
                 isSelected: isSelected,
-                onTap: () => onSymbolSelected(option.symbol),
+                onTap: () => onSymbolSelected(option.id),
               );
             },
             separatorBuilder: (_, __) => const SizedBox(width: 12),
@@ -98,12 +100,34 @@ class _PaletteButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             option.iconBuilder?.call(context, isSelected) ??
-                Text(
-                  option.symbol,
-                  style: const TextStyle(
-                    fontFamily: 'Bravura',
-                    fontSize: 32,
-                    color: Colors.black,
+                SizedBox(
+                  width: 64,
+                  height: 48,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Ligne de portée complètement dépassant le symbole
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 24,
+                        height: 2,
+                        child: Container(
+                          color: Colors.black,
+                        ),
+                      ),
+                      // Symbole de la note
+                      Center(
+                        child: Text(
+                          option.symbol,
+                          style: const TextStyle(
+                            fontFamily: 'Bravura',
+                            fontSize: 32,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             const SizedBox(height: 4),
