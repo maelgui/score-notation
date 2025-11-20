@@ -9,8 +9,9 @@ class MusicSymbols {
   static const String accent = '\uE4A0'; // articAccent
 
   // Noteheads
-  static const String quarterNoteHead = '\uE0A4'; // Notehead black (tête seule)
-  
+  static const String noteheadWhole = '\uE0A2'; // Notehead white (tête seule)
+  static const String noteheadHalf = '\uE0A3'; // Notehead white (tête seule)
+  static const String noteheadBlack = '\uE0A4'; // Notehead black (tête seule)
   // Rudiments
   static const String flam = '\uE560';
   static const String drag = '\uE123';

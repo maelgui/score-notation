@@ -10,11 +10,11 @@ class NoteEventHelper {
   /// Retourne le symbole SMuFL à afficher pour un NoteEvent.
   static String getSymbol(NoteEvent event) {
     if (event.isRest) {
-      // Pour les silences, utiliser la durée pour déterminer le symbole
-      final duration = DurationConverter.fromFraction(event.duration);
-      if (duration != null) {
-        return duration.restSymbol;
-      }
+      // // Pour les silences, utiliser la durée pour déterminer le symbole
+      // final duration = DurationConverter.fromFraction(event.duration);
+      // if (duration != null) {
+      //   return duration.restSymbol;
+      // }
       // Si la durée n'est pas reconnue, essayer de déterminer le symbole directement
       final reduced = event.duration.reduce();
       if (reduced == DurationFraction.whole) {
@@ -38,29 +38,23 @@ class NoteEventHelper {
       // TODO: Implémenter l'affichage des notes de grâce pour les ornements
       
       // Déterminer le symbole de base selon la durée
-      String baseSymbol;
-      final duration = DurationConverter.fromFraction(event.duration);
-      if (duration != null) {
-        baseSymbol = duration.symbol;
-      } else {
         // Si la durée n'est pas reconnue, essayer de déterminer le symbole directement
         final reduced = event.duration.reduce();
         if (reduced == DurationFraction.whole) {
-          baseSymbol = MusicSymbols.wholeNote;
+          return MusicSymbols.noteheadWhole;
         } else if (reduced == DurationFraction.half) {
-          baseSymbol = MusicSymbols.halfNote;
+          return MusicSymbols.noteheadHalf;
         } else if (reduced == DurationFraction.quarter) {
-          baseSymbol = MusicSymbols.quarterNote;
+          return MusicSymbols.noteheadBlack;
         } else if (reduced == DurationFraction.eighth) {
-          baseSymbol = MusicSymbols.eighthNote;
+          return MusicSymbols.noteheadBlack;
         } else if (reduced == DurationFraction.sixteenth) {
-          baseSymbol = MusicSymbols.sixteenthNote;
+          return MusicSymbols.noteheadBlack;
         } else if (reduced == DurationFraction.thirtySecond) {
-          baseSymbol = MusicSymbols.thirtySecondNote;
+          return MusicSymbols.noteheadBlack;
         } else {
-          baseSymbol = MusicSymbols.quarterNote; // Par défaut
+          return MusicSymbols.noteheadBlack; // Par défaut
         }
-      }
       
       // Pour les notes avec accent, on garde la note complète avec hampe
       // L'accent sera indiqué visuellement (MusicSymbols.accent est un signe posé au-dessus)
@@ -70,7 +64,6 @@ class NoteEventHelper {
       // Si un ornement est présent, on affiche quand même la note principale
       // (l'ornement devrait être affiché comme note de grâce séparée, mais c'est complexe)
       // Pour l'instant, on retourne la note principale
-      return baseSymbol;
     }
   }
 }

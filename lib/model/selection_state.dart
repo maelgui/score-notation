@@ -6,38 +6,68 @@ import 'duration_fraction.dart';
 class StaffCursorPosition {
   const StaffCursorPosition({
     required this.measureIndex,
-    required this.position,
+    required this.eventIndex,
+    required this.isAfterEvent,
+    required this.positionInMeasure,
   });
 
+  /// Index de la mesure dans le score.
   final int measureIndex;
-  final DurationFraction position;
+
+  /// Index de l'événement dans la mesure (ou events.length si après tous les événements).
+  final int eventIndex;
+
+  /// True si le curseur est après l'événement (entre eventIndex et eventIndex+1).
+  /// False si le curseur est avant l'événement (au début de eventIndex).
+  final bool isAfterEvent;
+
+  /// Position rythmique dans la mesure (depuis le début de la mesure).
+  final DurationFraction positionInMeasure;
 
   StaffCursorPosition copyWith({
     int? measureIndex,
-    DurationFraction? position,
+    int? eventIndex,
+    bool? isAfterEvent,
+    DurationFraction? positionInMeasure,
   }) {
     return StaffCursorPosition(
       measureIndex: measureIndex ?? this.measureIndex,
-      position: position ?? this.position,
+      eventIndex: eventIndex ?? this.eventIndex,
+      isAfterEvent: isAfterEvent ?? this.isAfterEvent,
+      positionInMeasure: positionInMeasure ?? this.positionInMeasure,
     );
   }
 
+  /// Compare deux positions (pour les ranges de sélection).
   int compareTo(StaffCursorPosition other) {
     if (measureIndex != other.measureIndex) {
       return measureIndex.compareTo(other.measureIndex);
     }
-    return position.compareTo(other.position);
+    return positionInMeasure.compareTo(other.positionInMeasure);
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! StaffCursorPosition) return false;
-    return measureIndex == other.measureIndex && position == other.position;
+    return measureIndex == other.measureIndex &&
+        eventIndex == other.eventIndex &&
+        isAfterEvent == other.isAfterEvent &&
+        positionInMeasure == other.positionInMeasure;
   }
 
   @override
-  int get hashCode => Object.hash(measureIndex, position);
+  int get hashCode => Object.hash(
+        measureIndex,
+        eventIndex,
+        isAfterEvent,
+        positionInMeasure,
+      );
+
+  @override
+  String toString() =>
+      'StaffCursorPosition(measureIndex: $measureIndex, eventIndex: $eventIndex, '
+      'isAfterEvent: $isAfterEvent, positionInMeasure: $positionInMeasure)';
 }
 
 @immutable

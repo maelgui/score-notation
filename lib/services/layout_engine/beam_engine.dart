@@ -1,0 +1,208 @@
+import 'dart:math' as math;
+import '../../model/measure.dart';
+import '../../model/duration_fraction.dart';
+import '../../model/note_event.dart';
+import '../../utils/smufl/engraving_defaults.dart';
+import 'measure_layout_result.dart';
+
+/// Engine responsable du calcul des beams (ligatures).
+/// 
+/// Calcule :
+/// - Les groupes de notes à beamer
+/// - Les niveaux de beams (croche, double, triple...)
+/// - Les positions Y des beams
+/// - Les positions des hampes pour les notes beamed
+class BeamEngine {
+  BeamEngine._();
+
+  /// Trouve les groupes de notes consécutives qui doivent être beamed.
+  /// Les groupes sont limités à 1 temps maximum.
+  /// 
+  /// Prend une liste de notes avec leurs positions et événements.
+  static List<List<int>> findBeamGroups(
+    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    Measure measure,
+  ) {
+    if (notePositions.length < 2) return [];
+
+    // Un temps = dénominateur de la signature rythmique (ex: 1/4 dans 4/4)
+    final DurationFraction oneBeat = DurationFraction(1, measure.timeSignature.denominator);
+
+    final List<List<int>> beamGroups = [];
+    List<int> currentGroup = [];
+    DurationFraction currentGroupDuration = const DurationFraction(0, 1);
+
+    for (int i = 0; i < notePositions.length; i++) {
+      final note = notePositions[i];
+      final reduced = note.event.duration.reduce();
+      
+      // Vérifier si cette note doit être beamed (eighth, sixteenth, thirty-second)
+      final bool shouldBeam = reduced == DurationFraction.eighth ||
+                              reduced == DurationFraction.sixteenth ||
+                              reduced == DurationFraction.thirtySecond;
+
+      // Vérifier si cette note peut être beamed (eighth, sixteenth, thirty-second)
+      // ou si c'est un silence qui peut être dans un groupe beamed
+      final bool canBeInBeamGroup = shouldBeam || note.event.isRest;
+
+      if (canBeInBeamGroup) {
+        // Vérifier si cette note est consécutive à la dernière note du groupe actuel
+        bool isConsecutive = false;
+        if (currentGroup.isNotEmpty) {
+          // Trouver la dernière note (pas silence) du groupe actuel
+          int? lastNoteIndex;
+          for (int j = currentGroup.length - 1; j >= 0; j--) {
+            final idx = currentGroup[j];
+            if (!notePositions[idx].event.isRest) {
+              lastNoteIndex = idx;
+              break;
+            }
+          }
+          
+          if (lastNoteIndex != null) {
+            final lastNote = notePositions[lastNoteIndex];
+            // Calculer la position attendue après la dernière note du groupe
+            DurationFraction expectedPosition = lastNote.position;
+            for (int j = lastNoteIndex; j < i; j++) {
+              expectedPosition = expectedPosition.add(notePositions[j].event.duration);
+            }
+            isConsecutive = (note.position.subtract(expectedPosition).numerator.abs() < 2);
+          }
+        }
+
+        // Vérifier si on peut ajouter cette note au groupe actuel sans dépasser 1 temps
+        final DurationFraction newGroupDuration = currentGroupDuration.add(note.event.duration);
+        final bool exceedsOneBeat = newGroupDuration > oneBeat;
+
+        if (currentGroup.isEmpty) {
+          // Nouveau groupe (notes beamed ou silences)
+          currentGroup = [i];
+          currentGroupDuration = note.event.duration;
+        } else if (isConsecutive && !exceedsOneBeat) {
+          // Ajouter au groupe actuel (notes ou silences)
+          currentGroup.add(i);
+          currentGroupDuration = newGroupDuration;
+        } else {
+          // Terminer le groupe actuel et commencer un nouveau
+          if (currentGroup.length > 1) {
+            beamGroups.add(List.from(currentGroup));
+          }
+          currentGroup = [i];
+          currentGroupDuration = note.event.duration;
+        }
+      } else {
+        // Note qui ne doit pas être beamed, terminer le groupe actuel
+        if (currentGroup.length > 1) {
+          beamGroups.add(List.from(currentGroup));
+        }
+        currentGroup = [];
+        currentGroupDuration = const DurationFraction(0, 1);
+      }
+    }
+
+    // Ajouter le dernier groupe s'il existe
+    if (currentGroup.length > 1) {
+      beamGroups.add(currentGroup);
+    }
+    
+    return beamGroups;
+  }
+
+  /// Calcule les segments de beams à partir des groupes.
+  /// 
+  /// Retourne une liste de LayoutedBeamSegment avec les positions calculées.
+  /// 
+  /// Prend une liste de notes avec leurs positions et événements pour calculer
+  /// les positions X des beams.
+  static List<LayoutedBeamSegment> computeBeamSegments(
+    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<List<int>> beamGroups,
+    double staffY,
+  ) {
+    final List<LayoutedBeamSegment> segments = [];
+    
+    if (beamGroups.isEmpty) return segments;
+
+    // Calculer les nombres de beams pour chaque note
+    final Map<int, int> noteBeamCounts = computeBeamCounts(notePositions, beamGroups);
+    
+    // Placement des ligatures selon SMuFL (même logique que l'ancien code)
+    final double beamThickness = EngravingDefaults.beamThickness;
+    final double beamSpacing = EngravingDefaults.beamSpacing;
+    final double stemLength = EngravingDefaults.stemLength;
+    final double beamStep = beamThickness + beamSpacing;
+    
+    // Hauteur du beam le plus bas (le plus éloigné de la note)
+    // Les hampes sont vers le bas, donc on part du centre de la portée + la longueur de hampe
+    // Note: beamYOffset manuel n'existe plus, donc on utilise juste staffY + stemLength
+    final double beamBaseY = staffY + stemLength;
+
+    for (final group in beamGroups) {
+      if (group.length < 2) continue;
+
+      // Déterminer le nombre maximum de beams selon les durées
+      int maxBeamCount = 1;
+      for (final noteIndex in group) {
+        if (noteIndex >= notePositions.length) continue;
+        final beamCount = noteBeamCounts[noteIndex] ?? 1;
+        maxBeamCount = math.max(maxBeamCount, beamCount);
+      }
+
+      // Créer un segment pour chaque niveau de beam
+      for (int level = 0; level < maxBeamCount; level++) {
+        // Trouver les notes qui ont besoin de ce niveau de beam (level+1 beams ou plus)
+        final notesAtThisLevel = group.where((i) => (noteBeamCounts[i] ?? 0) > level).toList();
+        
+        if (notesAtThisLevel.length < 2) continue; // Besoin d'au moins 2 notes pour un beam
+
+        // Calculer les positions X de début et fin du beam
+        // Le beam doit être aligné avec les hampes (même logique que l'ancien code)
+        // Utiliser stemDownXOffset pour aligner avec les hampes
+        final double firstStemX = notePositions[notesAtThisLevel.first].x + EngravingDefaults.stemDownXOffset;
+        final double lastStemX = notePositions[notesAtThisLevel.last].x + EngravingDefaults.stemDownXOffset + EngravingDefaults.stemThickness;
+        
+        // Position Y du beam pour ce niveau
+        final double y = beamBaseY - (level * beamStep);
+        
+        segments.add(LayoutedBeamSegment(
+          level: level,
+          startX: firstStemX,
+          endX: lastStemX,
+          y: y,
+          noteIndices: notesAtThisLevel,
+        ));
+      }
+    }
+    
+    return segments;
+  }
+
+  /// Calcule le nombre de beams pour chaque note.
+  /// Retourne une Map<noteIndex, beamCount>
+  static Map<int, int> computeBeamCounts(
+    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<List<int>> beamGroups,
+  ) {
+    final Map<int, int> beamCounts = {};
+    
+    for (final group in beamGroups) {
+      for (final noteIndex in group) {
+        if (noteIndex >= notePositions.length) continue;
+        final note = notePositions[noteIndex];
+        final reduced = note.event.duration.reduce();
+        
+        int beamCount = 1;
+        if (reduced == DurationFraction.sixteenth) {
+          beamCount = 2;
+        } else if (reduced == DurationFraction.thirtySecond) {
+          beamCount = 3;
+        }
+        
+        beamCounts[noteIndex] = beamCount;
+      }
+    }
+    
+    return beamCounts;
+  }
+}
+

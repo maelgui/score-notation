@@ -48,6 +48,7 @@ enum EditMode {
 
 class _StaffScreenState extends State<StaffScreen> {
   static const int _defaultBarCount = 4;
+  static const int _defaultMeasuresPerLine = 4;
   final StorageService _storageService = StorageService();
   late final ScoreController _scoreController;
 
@@ -56,6 +57,7 @@ class _StaffScreenState extends State<StaffScreen> {
   NoteDuration? _selectedDuration = NoteDuration.quarter;
   bool _isLoading = true;
   EditMode _editMode = EditMode.write;
+  int _measuresPerLine = _defaultMeasuresPerLine;
   
   // Pour le mode sélection : stocker la note sélectionnée
   int? _selectedMeasureIndex;
@@ -197,26 +199,52 @@ class _StaffScreenState extends State<StaffScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Contrôle du nombre de barres
+                // Contrôle du nombre de barres et mesures par ligne
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
+                  child: Column(
                     children: [
-                      const Text('Nombre de barres:'),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Slider(
-                          value: _score.measures.length.toDouble(),
-                          min: 1,
-                          max: 16,
-                          divisions: 15,
-                          label: '${_score.measures.length}',
-                          onChanged: (value) {
-                            _handleBarCountChanged(value.round());
-                          },
-                        ),
+                      Row(
+                        children: [
+                          const Text('Nombre de barres:'),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Slider(
+                              value: _score.measures.length.toDouble(),
+                              min: 1,
+                              max: 16,
+                              divisions: 15,
+                              label: '${_score.measures.length}',
+                              onChanged: (value) {
+                                _handleBarCountChanged(value.round());
+                              },
+                            ),
+                          ),
+                          Text('${_score.measures.length}'),
+                        ],
                       ),
-                      Text('${_score.measures.length}'),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Text('Mesures par ligne:'),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Slider(
+                              value: _measuresPerLine.toDouble(),
+                              min: 1,
+                              max: 16,
+                              divisions: 15,
+                              label: '$_measuresPerLine',
+                              onChanged: (value) {
+                                setState(() {
+                                  _measuresPerLine = value.round();
+                                });
+                              },
+                            ),
+                          ),
+                          Text('$_measuresPerLine'),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -228,6 +256,7 @@ class _StaffScreenState extends State<StaffScreen> {
                     editMode: _editMode,
                     cursorPosition: _selectionState.cursor,
                     selectedNotes: _selectionState.selectedNotes,
+                    measuresPerLine: _measuresPerLine,
                     onBeatSelected: _editMode == EditMode.write
                         ? _handleAddNoteAtBeat
                         : _handleSelectNote,
@@ -341,7 +370,9 @@ class _StaffScreenState extends State<StaffScreen> {
       if (!event.isRest) {
         final cursor = StaffCursorPosition(
           measureIndex: measureIndex,
-          position: entry.position,
+          eventIndex: eventIndex,
+          isAfterEvent: false,
+          positionInMeasure: entry.position,
         );
         final selectionRef = NoteSelectionReference(
           measureIndex: measureIndex,
@@ -367,6 +398,7 @@ class _StaffScreenState extends State<StaffScreen> {
   }
 
   void _handleCursorChanged(StaffCursorPosition cursor) {
+    print('cursorChanged: $cursor');
     if (_editMode != EditMode.select) return;
     setState(() {
       _selectionState = _selectionState.copyWith(cursor: cursor);
