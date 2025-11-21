@@ -150,27 +150,37 @@ class BeamEngine {
 
       // Créer un segment pour chaque niveau de beam
       for (int level = 0; level < maxBeamCount; level++) {
-        // Trouver les notes qui ont besoin de ce niveau de beam (level+1 beams ou plus)
-        final notesAtThisLevel = group.where((i) => (noteBeamCounts[i] ?? 0) > level).toList();
-        
-        if (notesAtThisLevel.length < 2) continue; // Besoin d'au moins 2 notes pour un beam
-
-        // Calculer les positions X de début et fin du beam
-        // Le beam doit être aligné avec les hampes (même logique que l'ancien code)
-        // Utiliser stemDownXOffset pour aligner avec les hampes
-        final double firstStemX = notePositions[notesAtThisLevel.first].x + EngravingDefaults.stemDownXOffset;
-        final double lastStemX = notePositions[notesAtThisLevel.last].x + EngravingDefaults.stemDownXOffset + EngravingDefaults.stemThickness;
-        
         // Position Y du beam pour ce niveau
         final double y = beamBaseY - (level * beamStep);
         
-        segments.add(LayoutedBeamSegment(
-          level: level,
-          startX: firstStemX,
-          endX: lastStemX,
-          y: y,
-          noteIndices: notesAtThisLevel,
-        ));
+        // Créer des segments pour notes consécutives ayant ce niveau de beam
+        List<int> currentSegment = [];
+        
+        for (int i = 0; i < group.length; i++) {
+          final noteIndex = group[i];
+          final beamCount = noteBeamCounts[noteIndex] ?? 0;
+          
+          if (beamCount > level) {
+            currentSegment.add(noteIndex);
+          } else {
+            // Cette note n'a pas ce niveau de beam, finaliser le segment
+            if (currentSegment.length >= 2) {
+              _addBeamSegment(segments, notePositions, currentSegment, level, y);
+            } else if (currentSegment.length == 1) {
+              // Note isolée : créer un beam coupé
+              _addPartialBeam(segments, notePositions, group, currentSegment[0], level, y);
+            }
+            currentSegment = [];
+          }
+        }
+        
+        // Finaliser le dernier segment
+        if (currentSegment.length >= 2) {
+          _addBeamSegment(segments, notePositions, currentSegment, level, y);
+        } else if (currentSegment.length == 1) {
+          // Note isolée : créer un beam coupé
+          _addPartialBeam(segments, notePositions, group, currentSegment[0], level, y);
+        }
       }
     }
     
@@ -203,6 +213,74 @@ class BeamEngine {
     }
     
     return beamCounts;
+  }
+
+  /// Ajoute un segment de beam aux résultats.
+  static void _addBeamSegment(
+    List<LayoutedBeamSegment> segments,
+    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<int> noteIndices,
+    int level,
+    double y,
+  ) {
+    final double firstStemX = notePositions[noteIndices.first].x + EngravingDefaults.stemDownXOffset;
+    final double lastStemX = notePositions[noteIndices.last].x + EngravingDefaults.stemDownXOffset + EngravingDefaults.stemThickness;
+    
+    segments.add(LayoutedBeamSegment(
+      level: level,
+      startX: firstStemX,
+      endX: lastStemX,
+      y: y,
+      noteIndices: noteIndices,
+    ));
+  }
+
+  /// Ajoute un beam coupé (partial beam) pour une note isolée.
+  static void _addPartialBeam(
+    List<LayoutedBeamSegment> segments,
+    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<int> group,
+    int noteIndex,
+    int level,
+    double y,
+  ) {
+    final double stemX = notePositions[noteIndex].x + EngravingDefaults.stemDownXOffset;
+    final double beamLength = EngravingDefaults.beamThickness * 3; // Longueur du beam coupé
+    
+    // Déterminer la direction du beam coupé
+    final int positionInGroup = group.indexOf(noteIndex);
+    final bool isFirst = positionInGroup == 0;
+    final bool isLast = positionInGroup == group.length - 1;
+    
+    String direction;
+    double startX, endX;
+    
+    if (isFirst) {
+      // Première note : beam vers la droite
+      direction = 'right';
+      startX = stemX;
+      endX = stemX + beamLength;
+    } else if (isLast) {
+      // Dernière note : beam vers la gauche
+      direction = 'left';
+      startX = stemX - beamLength;
+      endX = stemX + EngravingDefaults.stemThickness;
+    } else {
+      // Note au milieu : beam vers la note suivante par défaut
+      direction = 'right';
+      startX = stemX;
+      endX = stemX + beamLength;
+    }
+    
+    segments.add(LayoutedBeamSegment(
+      level: level,
+      startX: startX,
+      endX: endX,
+      y: y,
+      noteIndices: [noteIndex],
+      isPartial: true,
+      partialDirection: direction,
+    ));
   }
 }
 

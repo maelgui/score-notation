@@ -60,6 +60,8 @@ class LayoutedBeamSegment {
     required this.endX,
     required this.y,
     required this.noteIndices,
+    this.isPartial = false,
+    this.partialDirection,
   });
 
   /// Niveau du beam (0 = plus bas, 1, 2, 3...).
@@ -76,6 +78,12 @@ class LayoutedBeamSegment {
 
   /// Indices des notes dans le groupe (dans la liste des notes de la mesure).
   final List<int> noteIndices;
+
+  /// Si true, c'est un beam coupé (partial beam).
+  final bool isPartial;
+
+  /// Direction du beam coupé : 'left' ou 'right'.
+  final String? partialDirection;
 }
 
 

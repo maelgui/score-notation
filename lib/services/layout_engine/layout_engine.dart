@@ -185,6 +185,8 @@ class LayoutEngine {
             beam.endX,
         y: absoluteStaffY + (beam.y - referenceStaffY),
         noteIndices: beam.noteIndices,
+        isPartial: beam.isPartial,
+        partialDirection: beam.partialDirection,
       );
     }).toList();
 

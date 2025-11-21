@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:snare_notation/model/note_event.dart';
 
 import 'model/accent.dart';
 import 'model/ornament.dart';
@@ -10,6 +11,7 @@ import 'utils/bravura_metrics.dart';
 import 'utils/measure_editor.dart';
 import 'utils/music_symbols.dart';
 import 'utils/selection_utils.dart';
+import 'utils/duration_converter.dart';
 import 'widgets/staff_view.dart';
 import 'widgets/symbol_palette.dart';
 import 'widgets/rudiment_icon.dart';
@@ -170,6 +172,14 @@ class _StaffScreenState extends State<StaffScreen> {
     _scoreController.saveScore();
   }
 
+  NoteEvent? get _selectedEvent {
+    if (_selectedMeasureIndex == null || _selectedEventIndex == null) return null;
+    if (_selectedMeasureIndex! >= _score.measures.length) return null;
+    final measure = _score.measures[_selectedMeasureIndex!];
+    if (_selectedEventIndex! >= measure.events.length) return null;
+    return measure.events[_selectedEventIndex!];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -327,9 +337,7 @@ class _StaffScreenState extends State<StaffScreen> {
                   selectedSymbol: _selectedSymbol,
                   availableSymbols: _availableSymbols,
                   modificationSymbols: _modificationSymbols,
-                  selectedMeasureIndex: _selectedMeasureIndex,
-                  selectedEventIndex: _selectedEventIndex,
-                  score: _score,
+                  selectedEvent: _selectedEvent,
                   onSelectedSymbolSelected: (symbol) {
                     _handleSymbolSelected(symbol);
                   },
@@ -384,9 +392,17 @@ class _StaffScreenState extends State<StaffScreen> {
         measureIndex: measureIndex,
         eventIndex: eventIndex,
       );
+      
+      // Mettre à jour la durée sélectionnée avec celle de la note
+      final selectedEvent = measure.events[eventIndex];
+      final NoteDuration? correspondingDuration = DurationConverter.fromFraction(selectedEvent.duration);
+      
       setState(() {
         _selectedMeasureIndex = measureIndex;
         _selectedEventIndex = eventIndex;
+        if (correspondingDuration != null) {
+          _selectedDuration = correspondingDuration;
+        }
         _selectionState = SelectionState(
           cursor: cursor,
           range: SelectionRange(start: cursor, end: cursor),
@@ -645,9 +661,7 @@ class _UnifiedPalette extends StatelessWidget {
     required this.selectedSymbol,
     required this.availableSymbols,
     required this.modificationSymbols,
-    this.selectedMeasureIndex,
-    this.selectedEventIndex,
-    required this.score,
+    this.selectedEvent,
     required this.onSelectedSymbolSelected,
     required this.onModificationSymbolSelected,
   });
@@ -655,9 +669,7 @@ class _UnifiedPalette extends StatelessWidget {
   final SelectedSymbol selectedSymbol;
   final List<PaletteSymbol<SelectedSymbol>> availableSymbols;
   final List<PaletteSymbol<ModificationSymbol>> modificationSymbols;
-  final int? selectedMeasureIndex;
-  final int? selectedEventIndex;
-  final Score score;
+  final NoteEvent? selectedEvent;
   final ValueChanged<SelectedSymbol> onSelectedSymbolSelected;
   final ValueChanged<String> onModificationSymbolSelected;
 
@@ -666,27 +678,13 @@ class _UnifiedPalette extends StatelessWidget {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
     // Vérifier si une note est sélectionnée
-    final bool hasNoteSelected = selectedMeasureIndex != null &&
-        selectedEventIndex != null &&
-        selectedMeasureIndex! >= 0 &&
-        selectedMeasureIndex! < score.measures.length &&
-        selectedEventIndex! >= 0 &&
-        selectedEventIndex! < score.measures[selectedMeasureIndex!].events.length;
+    final bool hasNoteSelected = selectedEvent != null;
 
     // Déterminer l'état actif des ModificationSymbols si une note est sélectionnée
-    bool hasAccent = false;
-    bool hasFlam = false;
-    bool hasDrag = false;
-    bool hasRoll = false;
-
-    if (hasNoteSelected) {
-      final measure = score.measures[selectedMeasureIndex!];
-      final event = measure.events[selectedEventIndex!];
-      hasAccent = event.accent == Accent.accent;
-      hasFlam = event.ornament == Ornament.flam;
-      hasDrag = event.ornament == Ornament.drag;
-      hasRoll = event.ornament == Ornament.roll;
-    }
+    final bool hasAccent = selectedEvent?.accent == Accent.accent;
+    final bool hasFlam = selectedEvent?.ornament == Ornament.flam;
+    final bool hasDrag = selectedEvent?.ornament == Ornament.drag;
+    final bool hasRoll = selectedEvent?.ornament == Ornament.roll;
 
     return Material(
       elevation: 4,
