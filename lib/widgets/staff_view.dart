@@ -175,10 +175,8 @@ class StaffView extends StatelessWidget {
           onTapDown: (details) {
 
             // Find measure index that contains the tap position
-            print('onTapDown details: $details');
             final cursor = resolveCursor(details.localPosition);
 
-            print('cursor: $cursor');
             if (cursor != null) {
               onCursorChanged?.call(cursor);
             }

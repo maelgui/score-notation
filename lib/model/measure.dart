@@ -12,6 +12,7 @@ import 'time_signature.dart';
 class Measure {
   const Measure({
     required this.timeSignature,
+    required this.number,
     this.events = const [],
   });
 
@@ -20,6 +21,9 @@ class Measure {
 
   /// Liste des événements musicaux (notes et silences) dans l'ordre chronologique.
   final List<NoteEvent> events;
+
+  /// Numéro de la mesure (1-indexed, optionnel pour compatibilité).
+  final int number;
 
   /// Durée maximale de la mesure selon la signature rythmique.
   DurationFraction get maxDuration {
@@ -46,15 +50,17 @@ class Measure {
   Measure copyWith({
     TimeSignature? timeSignature,
     List<NoteEvent>? events,
+    int? number,
   }) {
     return Measure(
       timeSignature: timeSignature ?? this.timeSignature,
       events: events ?? this.events,
+      number: number ?? this.number,
     );
   }
 
   /// Crée une mesure vide remplie de silences.
-  factory Measure.empty(TimeSignature timeSignature) {
+  factory Measure.empty(TimeSignature timeSignature, int number) {
     // Créer des silences pour chaque temps
     final restDuration = DurationFraction(1, timeSignature.denominator);
     final events = List.generate(
@@ -64,7 +70,7 @@ class Measure {
         isRest: true,
       ),
     );
-    return Measure(timeSignature: timeSignature, events: events);
+    return Measure(timeSignature: timeSignature, events: events, number: number);
   }
 
   @override
@@ -72,6 +78,7 @@ class Measure {
     if (identical(this, other)) return true;
     if (other is! Measure) return false;
     if (timeSignature != other.timeSignature) return false;
+    if (number != other.number) return false;
     if (events.length != other.events.length) return false;
     for (int i = 0; i < events.length; i++) {
       if (events[i] != other.events[i]) return false;
@@ -81,17 +88,18 @@ class Measure {
 
   @override
   int get hashCode {
-    return Object.hash(timeSignature, events.length);
+    return Object.hash(timeSignature, number, events.length);
   }
 
   @override
   String toString() {
-    return 'Measure($timeSignature, ${events.length} events, duration: $totalDuration/$maxDuration)';
+    return 'Measure(#$number $timeSignature, ${events.length} events, duration: $totalDuration/$maxDuration)';
   }
 
   Map<String, dynamic> toJson() => {
         'timeSignature': timeSignature.toJson(),
         'events': events.map((e) => e.toJson()).toList(),
+        'number': number,
       };
 
   factory Measure.fromJson(Map<String, dynamic> json) {
@@ -103,6 +111,7 @@ class Measure {
               ?.map((e) => NoteEvent.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      number: json['number'] as int,
     );
   }
 }

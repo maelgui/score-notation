@@ -70,10 +70,9 @@ class EngravingDefaults {
   // === Espacement ===
   /// Espacement avant la barre de mesure selon SMuFL.
   /// spaceBeforeBarline ≈ 0.25 × noteheadWidth
-  static double get spaceBeforeBarline => 2 * noteHeadWidth + (noteHeadWidth / 2);
+  static double get spaceBeforeBarline => 1 * noteHeadWidth;
 
-  // === Largeur minimale de mesure ===
-  static const double minMeasureWidthFactor = 6.0;
+  // === Facteurs de spacing ===
   static const double noteSpacingBaseUnitFactor = 2.0;
 }
 

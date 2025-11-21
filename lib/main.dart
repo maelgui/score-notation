@@ -58,39 +58,55 @@ class _StaffScreenState extends State<StaffScreen> {
   bool _isLoading = true;
   EditMode _editMode = EditMode.write;
   int _measuresPerLine = _defaultMeasuresPerLine;
-  
+
   // Pour le mode sélection : stocker la note sélectionnée
   int? _selectedMeasureIndex;
   int? _selectedEventIndex;
   SelectionState _selectionState = SelectionState();
 
   static const List<PaletteSymbol<SelectedSymbol>> _availableSymbols = [
-    PaletteSymbol(label: 'Droite', id: SelectedSymbol.right, symbol: MusicSymbols.quarterNote),
-    PaletteSymbol(label: 'Gauche', id: SelectedSymbol.left, symbol: MusicSymbols.quarterNoteUp),
-    PaletteSymbol(label: 'Silence', id: SelectedSymbol.rest, symbol: MusicSymbols.restQuarter),
+    PaletteSymbol(
+      label: 'Droite',
+      id: SelectedSymbol.right,
+      symbol: MusicSymbols.quarterNote,
+    ),
+    PaletteSymbol(
+      label: 'Gauche',
+      id: SelectedSymbol.left,
+      symbol: MusicSymbols.quarterNoteUp,
+    ),
+    PaletteSymbol(
+      label: 'Silence',
+      id: SelectedSymbol.rest,
+      symbol: MusicSymbols.restQuarter,
+    ),
   ];
 
   static final List<PaletteSymbol<ModificationSymbol>> _modificationSymbols = [
-    const PaletteSymbol(label: 'Accent', id: ModificationSymbol.accent, symbol: MusicSymbols.accent),
+    const PaletteSymbol(
+      label: 'Accent',
+      id: ModificationSymbol.accent,
+      symbol: MusicSymbols.accent,
+    ),
     PaletteSymbol(
       label: 'Flam',
       id: ModificationSymbol.flam,
       symbol: MusicSymbols.flam,
-      iconBuilder: (context, isActive) => RudimentIcon(
-        graceNoteCount: 1,
-        isActive: isActive,
-      ),
+      iconBuilder: (context, isActive) =>
+          RudimentIcon(graceNoteCount: 1, isActive: isActive),
     ),
     PaletteSymbol(
       label: 'Drag',
       id: ModificationSymbol.drag,
       symbol: MusicSymbols.drag,
-      iconBuilder: (context, isActive) => RudimentIcon(
-        graceNoteCount: 2,
-        isActive: isActive,
-      ),
+      iconBuilder: (context, isActive) =>
+          RudimentIcon(graceNoteCount: 2, isActive: isActive),
     ),
-    const PaletteSymbol(label: 'Roulement', id: ModificationSymbol.roll, symbol: MusicSymbols.roll),
+    const PaletteSymbol(
+      label: 'Roulement',
+      id: ModificationSymbol.roll,
+      symbol: MusicSymbols.roll,
+    ),
   ];
 
   @override
@@ -105,7 +121,7 @@ class _StaffScreenState extends State<StaffScreen> {
     _loadBravuraMetrics();
     _loadScore();
   }
-  
+
   Future<void> _loadBravuraMetrics() async {
     // Charger les métriques Bravura en arrière-plan
     await BravuraMetrics.load();
@@ -140,9 +156,9 @@ class _StaffScreenState extends State<StaffScreen> {
       setState(() {});
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Effacement impossible: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Effacement impossible: $error')));
     }
   }
 
@@ -189,9 +205,7 @@ class _StaffScreenState extends State<StaffScreen> {
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: 'Effacer',
-            onPressed: _scoreController.hasNotes()
-                ? _handleClear
-                : null,
+            onPressed: _scoreController.hasNotes() ? _handleClear : null,
           ),
         ],
       ),
@@ -201,7 +215,10 @@ class _StaffScreenState extends State<StaffScreen> {
               children: [
                 // Contrôle du nombre de barres et mesures par ligne
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Column(
                     children: [
                       Row(
@@ -269,7 +286,10 @@ class _StaffScreenState extends State<StaffScreen> {
                 ),
                 // Sélecteur de durée
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       const Text('Durée:'),
@@ -302,39 +322,25 @@ class _StaffScreenState extends State<StaffScreen> {
                   ),
                 ),
                 const Divider(height: 1),
-                // Palette contextuelle de modification (mode sélection avec note sélectionnée)
-                if (_editMode == EditMode.select && 
-                    _selectedMeasureIndex != null && 
-                    _selectedEventIndex != null)
-                  Column(
-                    children: [
-                      _ModificationPalette(
-                        symbols: _modificationSymbols,
-                        selectedMeasureIndex: _selectedMeasureIndex!,
-                        selectedEventIndex: _selectedEventIndex!,
-                        score: _score,
-                        onSymbolSelected: (symbol) {
-                          _handleModifyNote(symbol);
-                        },
-                      ),
-                      const Divider(height: 1),
-                    ],
-                  ),
-                // Palette de symboles (mode écriture ou sélection sans note sélectionnée)
-                SymbolPalette<SelectedSymbol>(
-                  symbols: _availableSymbols,
+                // Palette unifiée de symboles (tous les symboles dans une même barre)
+                _UnifiedPalette(
                   selectedSymbol: _selectedSymbol,
-                  onSymbolSelected: (symbol) {
-                    setState(() {
-                      _selectedSymbol = symbol;
-                    });
+                  availableSymbols: _availableSymbols,
+                  modificationSymbols: _modificationSymbols,
+                  selectedMeasureIndex: _selectedMeasureIndex,
+                  selectedEventIndex: _selectedEventIndex,
+                  score: _score,
+                  onSelectedSymbolSelected: (symbol) {
+                    _handleSymbolSelected(symbol);
+                  },
+                  onModificationSymbolSelected: (symbol) {
+                    _handleModifyNote(symbol);
                   },
                 ),
               ],
             ),
     );
   }
-
 
   Future<void> _handleAddNoteAtBeat(
     int measureIndex,
@@ -363,42 +369,34 @@ class _StaffScreenState extends State<StaffScreen> {
 
     // Trouver la position de l'événement sélectionné
     final measure = _score.measures[measureIndex];
-    final eventsWithPositions = MeasureEditor.extractEventsWithPositions(measure);
+    final eventsWithPositions = MeasureEditor.extractEventsWithPositions(
+      measure,
+    );
     if (eventIndex >= 0 && eventIndex < eventsWithPositions.length) {
       final entry = eventsWithPositions[eventIndex];
-      final event = entry.event;
-      if (!event.isRest) {
-        final cursor = StaffCursorPosition(
-          measureIndex: measureIndex,
-          eventIndex: eventIndex,
-          isAfterEvent: false,
-          positionInMeasure: entry.position,
+      final cursor = StaffCursorPosition(
+        measureIndex: measureIndex,
+        eventIndex: eventIndex,
+        isAfterEvent: false,
+        positionInMeasure: entry.position,
+      );
+      final selectionRef = NoteSelectionReference(
+        measureIndex: measureIndex,
+        eventIndex: eventIndex,
+      );
+      setState(() {
+        _selectedMeasureIndex = measureIndex;
+        _selectedEventIndex = eventIndex;
+        _selectionState = SelectionState(
+          cursor: cursor,
+          range: SelectionRange(start: cursor, end: cursor),
+          selectedNotes: {selectionRef},
         );
-        final selectionRef = NoteSelectionReference(
-          measureIndex: measureIndex,
-          eventIndex: eventIndex,
-        );
-        setState(() {
-          _selectedMeasureIndex = measureIndex;
-          _selectedEventIndex = eventIndex;
-          _selectionState = SelectionState(
-            cursor: cursor,
-            range: SelectionRange(start: cursor, end: cursor),
-            selectedNotes: {selectionRef},
-          );
-        });
-    } else {
-        setState(() {
-          _selectedMeasureIndex = null;
-          _selectedEventIndex = null;
-          _selectionState = SelectionState();
-        });
-      }
+      });
     }
   }
 
   void _handleCursorChanged(StaffCursorPosition cursor) {
-    print('cursorChanged: $cursor');
     if (_editMode != EditMode.select) return;
     setState(() {
       _selectionState = _selectionState.copyWith(cursor: cursor);
@@ -461,6 +459,40 @@ class _StaffScreenState extends State<StaffScreen> {
     });
   }
 
+  /// Gère la sélection d'un symbole dans la palette.
+  /// Remplace la note sélectionnée
+  Future<void> _handleSymbolSelected(SelectedSymbol symbol) async {
+    setState(() {
+      _selectedSymbol = symbol;
+    });
+
+    if (_selectedMeasureIndex == null || _selectedEventIndex == null) {
+      return;
+    }
+
+    // Si une note est sélectionnée, la remplacer en gardant sa durée
+    final measure = _score.measures[_selectedMeasureIndex!];
+    if (_selectedEventIndex! >= 0 &&
+        _selectedEventIndex! < measure.events.length) {
+      await _scoreController.addNoteAtBeat(
+        _selectedMeasureIndex!,
+        eventIndex: _selectedEventIndex!,
+        selectedSymbol: symbol,
+        selectedDuration: _selectedDuration,
+      );
+
+      // Selection la note suivante
+      _handleSelectNote(
+        _selectedMeasureIndex!,
+        _selectedEventIndex! + 1,
+        false,
+      );
+
+      setState(() {});
+      return;
+    }
+  }
+
   /// Gère la modification d'une note sélectionnée.
   Future<void> _handleModifyNote(String symbol) async {
     if (_selectedMeasureIndex == null || _selectedEventIndex == null) {
@@ -469,7 +501,7 @@ class _StaffScreenState extends State<StaffScreen> {
 
     final measure = _score.measures[_selectedMeasureIndex!];
     final event = measure.events[_selectedEventIndex!];
-    
+
     Accent? accent = event.accent; // Préserver l'accent existant
     Ornament? ornament = event.ornament; // Préserver l'ornement existant
 
@@ -496,113 +528,44 @@ class _StaffScreenState extends State<StaffScreen> {
     if (!mounted) return;
     setState(() {});
   }
-
 }
 
-/// Palette contextuelle pour modifier une note sélectionnée.
-/// Affiche visuellement les attributs actifs de la note.
-class _ModificationPalette extends StatelessWidget {
-  const _ModificationPalette({
-    required this.symbols,
-    required this.selectedMeasureIndex,
-    required this.selectedEventIndex,
-    required this.score,
-    required this.onSymbolSelected,
-  });
-
-  final List<PaletteSymbol<ModificationSymbol>> symbols;
-  final int selectedMeasureIndex;
-  final int selectedEventIndex;
-  final Score score;
-  final ValueChanged<String> onSymbolSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    // Récupérer la note sélectionnée
-    if (selectedMeasureIndex < 0 || 
-        selectedMeasureIndex >= score.measures.length) {
-      return const SizedBox.shrink();
-    }
-
-    final measure = score.measures[selectedMeasureIndex];
-    if (selectedEventIndex < 0 || selectedEventIndex >= measure.events.length) {
-      return const SizedBox.shrink();
-    }
-
-    final event = measure.events[selectedEventIndex];
-    
-    // Déterminer quels attributs sont actifs
-    final bool hasAccent = event.accent == Accent.accent;
-    final bool hasFlam = event.ornament == Ornament.flam;
-    final bool hasDrag = event.ornament == Ornament.drag;
-    final bool hasRoll = event.ornament == Ornament.roll;
-
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    return Material(
-      elevation: 4,
-      color: colorScheme.surfaceContainerHighest,
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 110,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            scrollDirection: Axis.horizontal,
-            itemBuilder: (context, index) {
-              final PaletteSymbol option = symbols[index];
-              final bool isActive;
-              
-              // Déterminer si cet attribut est actif
-              if (option.symbol == MusicSymbols.accent) {
-                isActive = hasAccent;
-              } else if (option.symbol == MusicSymbols.flam) {
-                isActive = hasFlam;
-              } else if (option.symbol == MusicSymbols.drag) {
-                isActive = hasDrag;
-              } else if (option.symbol == MusicSymbols.roll) {
-                isActive = hasRoll;
-              } else {
-                isActive = false;
-              }
-
-              return _ModificationPaletteButton(
-                option: option,
-                isActive: isActive,
-                onTap: () => onSymbolSelected(option.symbol),
-              );
-            },
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemCount: symbols.length,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ModificationPaletteButton extends StatelessWidget {
-  const _ModificationPaletteButton({
+/// Bouton de palette unifié qui peut afficher une ligne de portée ou non.
+class _UnifiedPaletteButton extends StatelessWidget {
+  const _UnifiedPaletteButton({
     required this.option,
     required this.isActive,
+    required this.showStaffLine,
     required this.onTap,
+    this.isDisabled = false,
   });
 
   final PaletteSymbol option;
   final bool isActive;
+  final bool showStaffLine;
   final VoidCallback onTap;
+  final bool isDisabled;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
-    final Color borderColor =
-        isActive ? colorScheme.primary : colorScheme.outline;
-    final Color backgroundColor =
-        isActive ? colorScheme.primaryContainer : colorScheme.surface;
+    final Color borderColor = isDisabled
+        ? colorScheme.outline.withOpacity(0.3)
+        : (isActive
+            ? colorScheme.primary
+            : colorScheme.outline);
+    final Color backgroundColor = isDisabled
+        ? colorScheme.surface.withOpacity(0.5)
+        : (isActive
+            ? colorScheme.primaryContainer
+            : colorScheme.surface);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
+    return Opacity(
+      opacity: isDisabled ? 0.5 : 1.0,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: isDisabled ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -616,24 +579,192 @@ class _ModificationPaletteButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             option.iconBuilder?.call(context, isActive) ??
-                Text(
-                  option.symbol,
-                  style: TextStyle(
-                    fontFamily: 'Bravura',
-                    fontSize: 32,
-                    color: isActive ? colorScheme.primary : Colors.black,
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
+                (showStaffLine
+                    ? SizedBox(
+                        width: 64,
+                        height: 48,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Ligne de portée complètement dépassant le symbole
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              top: 24,
+                              height: 2,
+                              child: Container(color: Colors.black),
+                            ),
+                            // Symbole de la note
+                            Center(
+                              child: Text(
+                                option.symbol,
+                                style: const TextStyle(
+                                  fontFamily: 'Bravura',
+                                  fontSize: 32,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Text(
+                        option.symbol,
+                        style: TextStyle(
+                          fontFamily: 'Bravura',
+                          fontSize: 32,
+                          color: isDisabled
+                              ? Colors.grey
+                              : (isActive ? colorScheme.primary : Colors.black),
+                          fontWeight: isActive
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      )),
             const SizedBox(height: 4),
             Text(
               option.label,
               style: theme.textTheme.labelMedium?.copyWith(
-                color: isActive ? colorScheme.primary : null,
+                color: isDisabled
+                    ? Colors.grey
+                    : (isActive ? colorScheme.primary : null),
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ],
+        ),
+      ),
+      ),
+    );
+  }
+}
+
+/// Palette unifiée qui affiche tous les symboles (SelectedSymbol et ModificationSymbol) dans une même barre.
+class _UnifiedPalette extends StatelessWidget {
+  const _UnifiedPalette({
+    required this.selectedSymbol,
+    required this.availableSymbols,
+    required this.modificationSymbols,
+    this.selectedMeasureIndex,
+    this.selectedEventIndex,
+    required this.score,
+    required this.onSelectedSymbolSelected,
+    required this.onModificationSymbolSelected,
+  });
+
+  final SelectedSymbol selectedSymbol;
+  final List<PaletteSymbol<SelectedSymbol>> availableSymbols;
+  final List<PaletteSymbol<ModificationSymbol>> modificationSymbols;
+  final int? selectedMeasureIndex;
+  final int? selectedEventIndex;
+  final Score score;
+  final ValueChanged<SelectedSymbol> onSelectedSymbolSelected;
+  final ValueChanged<String> onModificationSymbolSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+
+    // Vérifier si une note est sélectionnée
+    final bool hasNoteSelected = selectedMeasureIndex != null &&
+        selectedEventIndex != null &&
+        selectedMeasureIndex! >= 0 &&
+        selectedMeasureIndex! < score.measures.length &&
+        selectedEventIndex! >= 0 &&
+        selectedEventIndex! < score.measures[selectedMeasureIndex!].events.length;
+
+    // Déterminer l'état actif des ModificationSymbols si une note est sélectionnée
+    bool hasAccent = false;
+    bool hasFlam = false;
+    bool hasDrag = false;
+    bool hasRoll = false;
+
+    if (hasNoteSelected) {
+      final measure = score.measures[selectedMeasureIndex!];
+      final event = measure.events[selectedEventIndex!];
+      hasAccent = event.accent == Accent.accent;
+      hasFlam = event.ornament == Ornament.flam;
+      hasDrag = event.ornament == Ornament.drag;
+      hasRoll = event.ornament == Ornament.roll;
+    }
+
+    return Material(
+      elevation: 4,
+      color: colorScheme.surfaceContainerHighest,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 110,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            scrollDirection: Axis.horizontal,
+            itemBuilder: (context, index) {
+              // Afficher d'abord les SelectedSymbols
+              if (index < availableSymbols.length) {
+                final PaletteSymbol<SelectedSymbol> option =
+                    availableSymbols[index];
+                final bool isSelected = option.id == selectedSymbol;
+                return _UnifiedPaletteButton(
+                  option: option,
+                  isActive: isSelected,
+                  showStaffLine: true,
+                  onTap: () => onSelectedSymbolSelected(option.id),
+                );
+              }
+
+              // Ensuite les ModificationSymbols
+              final modificationIndex = index - availableSymbols.length;
+              if (modificationIndex < modificationSymbols.length) {
+                final PaletteSymbol<ModificationSymbol> option =
+                    modificationSymbols[modificationIndex];
+                final bool isActive;
+
+                // Déterminer si cet attribut est actif
+                if (option.symbol == MusicSymbols.accent) {
+                  isActive = hasAccent;
+                } else if (option.symbol == MusicSymbols.flam) {
+                  isActive = hasFlam;
+                } else if (option.symbol == MusicSymbols.drag) {
+                  isActive = hasDrag;
+                } else if (option.symbol == MusicSymbols.roll) {
+                  isActive = hasRoll;
+                } else {
+                  isActive = false;
+                }
+
+                return _UnifiedPaletteButton(
+                  option: option,
+                  isActive: isActive,
+                  showStaffLine: false,
+                  isDisabled: !hasNoteSelected,
+                  onTap: () => onModificationSymbolSelected(option.symbol),
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
+            separatorBuilder: (context, index) {
+              // Ajouter un séparateur plus large entre les deux groupes de symboles
+              // Le separatorBuilder reçoit l'index du séparateur (entre index et index+1)
+              // Donc après le dernier SelectedSymbol (index = availableSymbols.length - 1)
+              if (index == availableSymbols.length - 1) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 2,
+                      height: 60,
+                      color: colorScheme.outline.withOpacity(0.3),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                );
+              }
+              return const SizedBox(width: 12);
+            },
+            itemCount: availableSymbols.length + modificationSymbols.length,
+          ),
         ),
       ),
     );

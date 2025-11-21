@@ -46,22 +46,11 @@ class StaffPainter extends CustomPainter {
     ..strokeWidth = AppConstants.cursorWidth
     ..strokeCap = StrokeCap.round;
 
-  static final Paint _debugMeasurePaint = Paint()
-    ..color = Colors.red.withOpacity(0.3)
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.0;
-
   @override
   void paint(Canvas canvas, Size size) {
     if (score.measures.isEmpty || pageLayoutResult.systems.isEmpty) {
       return;
     }
-
-    final double availableWidth = size.width - 2 * padding;
-    canvas.drawRect(
-      Rect.fromLTRB(padding, 0, availableWidth + padding, size.height),
-      Paint()..color = Colors.red.withOpacity(0.3),
-    );
 
     Rect? selectionBounds;
     final Map<int, Rect> allMeasureBounds = {};
@@ -84,12 +73,13 @@ class StaffPainter extends CustomPainter {
         final measure = measureLayout.measureModel;
 
         // Bounding box de la mesure pour le hit-testing
-        final debugRect = Rect.fromLTWH(
-          measureLayout.origin.dx,
-          measureLayout.origin.dy,
-          measureLayout.width,
-          measureLayout.height,
-        );
+        // final debugRect = Rect.fromLTWH(
+        //   measureLayout.origin.dx,
+        //   measureLayout.origin.dy,
+        //   measureLayout.width,
+        //   measureLayout.height,
+        // );
+        final debugRect = measureLayout.boundingBox;
 
         // Stocker le bounding box avec l'index de la mesure dans le score
         // On doit trouver l'index de la mesure dans le score
@@ -97,12 +87,6 @@ class StaffPainter extends CustomPainter {
         if (measureIndex >= 0) {
           allMeasureBounds[measureIndex] = debugRect;
         }
-
-        // Dessiner un rectangle de débogage autour de la mesure
-        canvas.drawRect(
-          debugRect,
-          _debugMeasurePaint,
-        );
 
         // Dessiner la signature rythmique pour la première mesure
         if (measureIndex == 0) {
@@ -162,12 +146,20 @@ class StaffPainter extends CustomPainter {
           );
         }
 
-        // Dessiner une barre à la fin de chaque mesure (sauf la dernière du système)
-        if (i < system.measures.length - 1) {
+        // Dessiner une barre à la fin de chaque mesure
           _drawBarlineSymbol(
             canvas,
             MusicSymbols.barlineSingle,
-            measureLayout.barlineXEnd,
+            measureLayout.barlineXStart -1,
+            staffY,
+          );
+
+        // Dessiner une barre à la fin de chaque système
+        if (i == system.measures.length - 1) {
+          _drawBarlineSymbol(
+            canvas,
+            MusicSymbols.barlineSingle,
+            system.origin.dx + system.width,
             staffY,
           );
         }
@@ -386,6 +378,7 @@ class StaffPainter extends CustomPainter {
       }
       if (containingSystem != null) break;
     }
+    print(cursor);
     
     if (containingSystem == null || containingMeasure == null) return;
     

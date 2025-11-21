@@ -76,15 +76,16 @@ class ScoreController {
       // Ajouter des mesures
       final newMeasures = <Measure>[..._score.measures];
       while (newMeasures.length < newCount) {
-        newMeasures.add(_createDefaultMeasure());
+        newMeasures.add(_createDefaultMeasure(newMeasures.length + 1));
       }
       _score = _score.copyWith(measures: newMeasures);
     } else if (newCount < _score.measures.length) {
       // Retirer des mesures
-      _score = _score.copyWith(
-        measures: _score.measures.sublist(0, newCount),
-      );
+      final newMeasures = _score.measures.sublist(0, newCount);
+      _score = _score.copyWith(measures: newMeasures);
     }
+    // Normaliser les numéros de mesures après modification
+    _score = _normalizeMeasureNumbers(_score);
   }
 
   /// Ajoute une note dans une mesure.
@@ -245,23 +246,36 @@ class ScoreController {
     return Score(
       measures: List.generate(
         count,
-        (_) => _createDefaultMeasure(),
+        (index) => _createDefaultMeasure(index + 1),
       ),
     );
   }
 
-  Measure _createDefaultMeasure() {
+  Measure _createDefaultMeasure(int number) {
     final timeSignature = TimeSignature(
       AppConstants.defaultBeatsPerBar,
       AppConstants.defaultTimeSignatureDenominator,
     );
-    return Measure.empty(timeSignature);
+    return Measure.empty(timeSignature, number);
   }
 
   Score _enforceScoreIntegrity(Score score) {
-    // Pour l'instant, on retourne le score tel quel
-    // On pourrait ajouter une validation ici si nécessaire
-    return score;
+    // Normaliser les numéros de mesures pour s'assurer qu'ils sont corrects
+    return _normalizeMeasureNumbers(score);
+  }
+
+  /// Normalise les numéros de mesures pour qu'ils correspondent à leur index (1-based).
+  Score _normalizeMeasureNumbers(Score score) {
+    final normalizedMeasures = score.measures.asMap().entries.map((entry) {
+      final index = entry.key;
+      final measure = entry.value;
+      // Si le numéro est déjà correct, on le garde, sinon on le met à jour
+      if (measure.number == index + 1) {
+        return measure;
+      }
+      return measure.copyWith(number: index + 1);
+    }).toList();
+    return score.copyWith(measures: normalizedMeasures);
   }
 
   double _fractionToPosition(DurationFraction fraction) {

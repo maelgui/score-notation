@@ -13,7 +13,6 @@ class AppConstants {
 
   // === Dimensions de la portée ===
   static const double staffPadding = 24.0;
-  static const double barSpacing = 8.0;
   static const double barLineHeight = 28.0;
   static const double staffSpacing = 80.0; // Espacement vertical entre les portées
 

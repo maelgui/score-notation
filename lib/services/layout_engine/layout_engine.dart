@@ -1,93 +1,64 @@
+import 'package:flutter/material.dart';
+
 import '../../model/measure.dart';
 import '../../model/note_event.dart';
 import '../../model/duration_fraction.dart';
 import '../../utils/measure_editor.dart';
+import '../../utils/note_event_helper.dart';
 import '../../utils/smufl/engraving_defaults.dart';
 import 'beam_engine.dart';
 import 'measure_layout_result.dart';
+import 'note_layout_result.dart';
 import 'spacing_engine.dart';
 import 'stem_engine.dart';
 
 /// Settings pour le layout d'une mesure
 class LayoutSettings {
   const LayoutSettings({
-    required this.minWidth,
     required this.noteHeadWidth,
     required this.staffSpace,
     required this.baseUnitFactor,
     required this.staffY,
   });
 
-  final double minWidth;
   final double noteHeadWidth;
   final double staffSpace;
   final double baseUnitFactor;
   final double staffY;
 }
 
-/// Données brutes retournées par LayoutEngine pour construire NoteLayoutResult.
-class NoteLayoutData {
-  const NoteLayoutData({
-    required this.event,
-    required this.x,
-    required this.y,
-    required this.isBeamed,
-    this.stemX,
-    this.stemStartY,
-    this.stemEndY,
-  });
-
-  final NoteEvent event;
-  final double x;
-  final double y;
-  final bool isBeamed;
-  final double? stemX;
-  final double? stemStartY;
-  final double? stemEndY;
-}
-
-/// Données brutes retournées par LayoutEngine.
-class MeasureLayoutData {
-  const MeasureLayoutData({
-    required this.width,
-    required this.notes,
-    required this.beams,
-  });
-
-  final double width;
-  final List<NoteLayoutData> notes;
-  final List<LayoutedBeamSegment> beams;
-}
 
 /// Point d'entrée principal du Layout Engine.
 /// Orchestre tous les engines pour calculer le layout d'une mesure.
 class LayoutEngine {
   LayoutEngine._();
 
-  /// Calcule le layout d'une mesure et retourne les données brutes.
-  /// Les positions sont relatives (seront converties en absolues par PageEngine).
-  static MeasureLayoutData layoutMeasure(
+  /// Calcule le layout complet d'une mesure avec positions absolues.
+  /// 
+  /// [measure] : La mesure à layout
+  /// [settings] : Paramètres de layout
+  /// [measureOrigin] : Position absolue de la mesure dans la page
+  /// [uniformMeasureWidth] : Largeur uniforme de la mesure (peut être différente de la largeur naturelle)
+  /// [absoluteStaffY] : Position Y absolue de la ligne de portée
+  /// [systemHeight] : Hauteur du système
+  /// [referenceStaffY] : Position Y de référence utilisée pour les calculs relatifs
+  static MeasureLayoutResult layoutMeasure(
     Measure measure,
     LayoutSettings settings,
+    Offset measureOrigin,
+    double uniformMeasureWidth,
+    double absoluteStaffY,
+    double systemHeight,
+    double referenceStaffY,
   ) {
-    // 1. Calculer la largeur naturelle et la largeur finale
-    final double naturalWidth = SpacingEngine.computeNaturalWidth(
-      measure,
-      settings.noteHeadWidth,
-      settings.baseUnitFactor,
-    );
-    final double measureWidth = naturalWidth > settings.minWidth
-        ? naturalWidth
-        : settings.minWidth;
-
-    // 2. Calculer les positions X des notes
+    // 1. Calculer les positions X des notes directement avec uniformMeasureWidth
     final notePositions = SpacingEngine.computeNotePositions(
       measure,
-      measureWidth,
+      uniformMeasureWidth,
       0.0,
     );
 
-    // 3. Extraire les événements avec leurs positions pour le beam engine
+    // 2. Extraire les événements avec leurs positions pour le beam engine
     final eventsWithPositions = MeasureEditor.extractEventsWithPositions(measure);
     final notePositionsWithEvents = <({double x, NoteEvent event, DurationFraction position})>[];
     
@@ -101,62 +72,180 @@ class LayoutEngine {
       ));
     }
 
-    // 4. Trouver les groupes de beams
+    // 3. Trouver les groupes de beams
     final beamGroups = BeamEngine.findBeamGroups(notePositionsWithEvents, measure);
     final Set<int> beamedNoteIndices = {};
     for (final group in beamGroups) {
       beamedNoteIndices.addAll(group);
     }
     
-    // 5. Calculer les segments de beams
-    final beamSegments = BeamEngine.computeBeamSegments(
+    // 4. Calculer les segments de beams (avec positions relatives)
+    final relativeBeamSegments = BeamEngine.computeBeamSegments(
       notePositionsWithEvents,
       beamGroups,
-      settings.staffY,
+      referenceStaffY,
     );
     
     // Calculer beamBaseY pour les hampes beamed
     double? beamBaseY;
-    if (beamSegments.isNotEmpty) {
+    if (relativeBeamSegments.isNotEmpty) {
       final double stemLength = EngravingDefaults.stemLength;
-      beamBaseY = settings.staffY + stemLength;
+      beamBaseY = referenceStaffY + stemLength;
     }
 
-    // 6. Créer les données de layout des notes
-    final List<NoteLayoutData> notes = [];
+    // 5. Créer les NoteLayoutResult avec positions absolues
+    final List<NoteLayoutResult> notes = [];
     for (int i = 0; i < notePositions.length && i < measure.events.length; i++) {
       final pos = notePositions[i];
       final event = measure.events[i];
       final isBeamed = beamedNoteIndices.contains(i);
       
-      // Calculer la position Y
-      final double noteY = StemEngine.computeNoteCenterY(event, settings.staffY);
+      // Calculer la position Y relative
+      final double relativeNoteY = StemEngine.computeNoteCenterY(event, referenceStaffY);
       
-      // Calculer les positions de la hampe
+      // Calculer les positions de la hampe (relatives)
       final stemPos = StemEngine.computeStemPosition(
         pos.x,
-        noteY,
+        relativeNoteY,
         event,
-        settings.staffY,
+        referenceStaffY,
         isBeamed,
         beamBaseY,
       );
 
-      notes.add(NoteLayoutData(
-        event: event,
-        x: pos.x,
-        y: noteY,
-        isBeamed: isBeamed,
-        stemX: event.isRest ? null : stemPos.x,
-        stemStartY: event.isRest ? null : stemPos.startY,
-        stemEndY: event.isRest ? null : stemPos.endY,
+      // Convertir en positions absolues (pos.x est déjà calculé avec uniformMeasureWidth)
+      final double noteX = measureOrigin.dx +
+          EngravingDefaults.spaceBeforeBarline +
+          pos.x;
+      final double noteY = absoluteStaffY + (relativeNoteY - referenceStaffY);
+      final Offset noteheadPosition = Offset(noteX, noteY);
+
+      final double? absoluteStemX = event.isRest
+          ? null
+          : measureOrigin.dx +
+              EngravingDefaults.spaceBeforeBarline +
+              stemPos.x;
+      final double? absoluteStemTopY = event.isRest
+          ? null
+          : absoluteStaffY + (stemPos.startY - referenceStaffY);
+      final double? absoluteStemBottomY = event.isRest
+          ? null
+          : absoluteStaffY + (stemPos.endY - referenceStaffY);
+
+      // Calculer le bounding box
+      final String glyph = NoteEventHelper.getSymbol(event);
+      final Rect boundingBox = _calculateNoteBoundingBox(
+        glyph: glyph,
+        noteheadPosition: noteheadPosition,
+        isRest: event.isRest,
+        stemX: absoluteStemX,
+        stemTopY: absoluteStemTopY,
+        stemBottomY: absoluteStemBottomY,
+      );
+
+      // Calculer les informations de beam
+      int beamLevel = 0;
+      bool beamStartsGroup = false;
+      bool beamEndsGroup = false;
+      if (isBeamed) {
+        // Trouver le beam correspondant
+        for (final beam in relativeBeamSegments) {
+          if (beam.noteIndices.contains(i)) {
+            beamLevel = beam.level;
+            beamStartsGroup = beam.noteIndices.first == i;
+            beamEndsGroup = beam.noteIndices.last == i;
+            break;
+          }
+        }
+      }
+
+      notes.add(NoteLayoutResult(
+        noteModel: event,
+        noteheadPosition: noteheadPosition,
+        boundingBox: boundingBox,
+        stemX: absoluteStemX ?? noteX,
+        stemTopY: absoluteStemTopY ?? noteY,
+        stemBottomY: absoluteStemBottomY ?? noteY,
+        beamLevel: beamLevel,
+        beamStartsGroup: beamStartsGroup,
+        beamEndsGroup: beamEndsGroup,
+        graceNotes: const [],
       ));
     }
 
-    return MeasureLayoutData(
-      width: measureWidth,
+    // 6. Convertir les beams en positions absolues
+    final List<LayoutedBeamSegment> absoluteBeams = relativeBeamSegments.map((beam) {
+      return LayoutedBeamSegment(
+        level: beam.level,
+        startX: measureOrigin.dx +
+            EngravingDefaults.spaceBeforeBarline +
+            beam.startX,
+        endX: measureOrigin.dx +
+            EngravingDefaults.spaceBeforeBarline +
+            beam.endX,
+        y: absoluteStaffY + (beam.y - referenceStaffY),
+        noteIndices: beam.noteIndices,
+      );
+    }).toList();
+
+    // 7. Calculer les positions des barlines et le bounding box
+    final double barlineXStart = measureOrigin.dx;
+    final double barlineXEnd = measureOrigin.dx + uniformMeasureWidth;
+    final Rect boundingBox = Rect.fromLTWH(
+      measureOrigin.dx,
+      measureOrigin.dy,
+      uniformMeasureWidth,
+      systemHeight,
+    );
+
+    return MeasureLayoutResult(
+      measureModel: measure,
+      origin: measureOrigin,
+      width: uniformMeasureWidth,
+      height: systemHeight,
+      staffY: absoluteStaffY,
+      barlineXStart: barlineXStart,
+      barlineXEnd: barlineXEnd,
+      boundingBox: boundingBox,
       notes: notes,
-      beams: beamSegments,
+      beams: absoluteBeams,
+    );
+  }
+
+  /// Calcule le bounding box d'une note pour le hit-testing.
+  static Rect _calculateNoteBoundingBox({
+    required String glyph,
+    required Offset noteheadPosition,
+    required bool isRest,
+    required double? stemX,
+    required double? stemTopY,
+    required double? stemBottomY,
+  }) {
+    final double fontSize = EngravingDefaults.symbolFontSize;
+    final double glyphWidth = fontSize * 0.8; // Approximation
+    final double glyphHeight = fontSize;
+
+    // Bounding box de base autour de la notehead
+    double left = noteheadPosition.dx - glyphWidth / 2;
+    double top = noteheadPosition.dy - glyphHeight / 2;
+    double right = noteheadPosition.dx + glyphWidth / 2;
+    double bottom = noteheadPosition.dy + glyphHeight / 2;
+
+    // Si la note a une hampe, étendre le bounding box
+    if (!isRest && stemX != null && stemTopY != null && stemBottomY != null) {
+      left = left < stemX ? left : stemX - 2;
+      right = right > stemX ? right : stemX + 2;
+      top = top < stemTopY ? top : stemTopY;
+      bottom = bottom > stemBottomY ? bottom : stemBottomY;
+    }
+
+    // Ajouter un padding pour faciliter le hit-testing
+    const double padding = 4.0;
+    return Rect.fromLTRB(
+      left - padding,
+      top - padding,
+      right + padding,
+      bottom + padding,
     );
   }
 }
