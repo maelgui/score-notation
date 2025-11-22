@@ -22,13 +22,17 @@ class BeamEngine {
   ///
   /// Prend une liste de notes avec leurs positions et événements.
   static List<List<int>> findBeamGroups(
-    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<({double x, NoteEvent event, DurationFraction position})>
+    notePositions,
     Measure measure,
   ) {
     if (notePositions.length < 2) return [];
 
     // Un temps = dénominateur de la signature rythmique (ex: 1/4 dans 4/4)
-    final DurationFraction oneBeat = DurationFraction(1, measure.timeSignature.denominator);
+    final DurationFraction oneBeat = DurationFraction(
+      1,
+      measure.timeSignature.denominator,
+    );
 
     final List<List<int>> beamGroups = [];
     List<int> currentGroup = [];
@@ -64,14 +68,19 @@ class BeamEngine {
             // Calculer la position attendue après la dernière note du groupe
             DurationFraction expectedPosition = lastNote.position;
             for (int j = lastNoteIndex; j < i; j++) {
-              expectedPosition = expectedPosition.add(notePositions[j].event.actualDuration);
+              expectedPosition = expectedPosition.add(
+                notePositions[j].event.actualDuration,
+              );
             }
-            isConsecutive = (note.position.subtract(expectedPosition).numerator.abs() < 2);
+            isConsecutive =
+                (note.position.subtract(expectedPosition).numerator.abs() < 2);
           }
         }
 
         // Vérifier si on peut ajouter cette note au groupe actuel sans dépasser 1 temps
-        final DurationFraction newGroupDuration = currentGroupDuration.add(note.event.actualDuration);
+        final DurationFraction newGroupDuration = currentGroupDuration.add(
+          note.event.actualDuration,
+        );
         final bool exceedsOneBeat = newGroupDuration > oneBeat;
 
         if (currentGroup.isEmpty) {
@@ -115,7 +124,8 @@ class BeamEngine {
   /// Prend une liste de notes avec leurs positions et événements pour calculer
   /// les positions X des beams.
   static List<LayoutedBeamSegment> computeBeamSegments(
-    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<({double x, NoteEvent event, DurationFraction position})>
+    notePositions,
     List<List<int>> beamGroups,
     double staffY,
   ) {
@@ -124,7 +134,10 @@ class BeamEngine {
     if (beamGroups.isEmpty) return segments;
 
     // Calculer les nombres de beams pour chaque note
-    final Map<int, int> noteBeamCounts = computeBeamCounts(notePositions, beamGroups);
+    final Map<int, int> noteBeamCounts = computeBeamCounts(
+      notePositions,
+      beamGroups,
+    );
 
     // Placement des ligatures selon SMuFL (même logique que l'ancien code)
     final double beamThickness = EngravingDefaults.beamThickness;
@@ -165,10 +178,23 @@ class BeamEngine {
           } else {
             // Cette note n'a pas ce niveau de beam, finaliser le segment
             if (currentSegment.length >= 2) {
-              _addBeamSegment(segments, notePositions, currentSegment, level, y);
+              _addBeamSegment(
+                segments,
+                notePositions,
+                currentSegment,
+                level,
+                y,
+              );
             } else if (currentSegment.length == 1) {
               // Note isolée : créer un beam coupé
-              _addPartialBeam(segments, notePositions, group, currentSegment[0], level, y);
+              _addPartialBeam(
+                segments,
+                notePositions,
+                group,
+                currentSegment[0],
+                level,
+                y,
+              );
             }
             currentSegment = [];
           }
@@ -179,7 +205,14 @@ class BeamEngine {
           _addBeamSegment(segments, notePositions, currentSegment, level, y);
         } else if (currentSegment.length == 1) {
           // Note isolée : créer un beam coupé
-          _addPartialBeam(segments, notePositions, group, currentSegment[0], level, y);
+          _addPartialBeam(
+            segments,
+            notePositions,
+            group,
+            currentSegment[0],
+            level,
+            y,
+          );
         }
       }
     }
@@ -190,7 +223,8 @@ class BeamEngine {
   /// Calcule le nombre de beams pour chaque note.
   /// Retourne une Map<noteIndex, beamCount>
   static Map<int, int> computeBeamCounts(
-    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<({double x, NoteEvent event, DurationFraction position})>
+    notePositions,
     List<List<int>> beamGroups,
   ) {
     final Map<int, int> beamCounts = {};
@@ -218,38 +252,48 @@ class BeamEngine {
   /// Ajoute un segment de beam aux résultats.
   static void _addBeamSegment(
     List<LayoutedBeamSegment> segments,
-    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<({double x, NoteEvent event, DurationFraction position})>
+    notePositions,
     List<int> noteIndices,
     int level,
     double y,
   ) {
-    final double firstStemX = notePositions[noteIndices.first].x + EngravingDefaults.stemDownXOffset;
-    final double lastStemX = notePositions[noteIndices.last].x + EngravingDefaults.stemDownXOffset + EngravingDefaults.stemThickness;
+    final double firstStemX =
+        notePositions[noteIndices.first].x + EngravingDefaults.stemDownXOffset;
+    final double lastStemX =
+        notePositions[noteIndices.last].x +
+        EngravingDefaults.stemDownXOffset +
+        EngravingDefaults.stemThickness;
 
     // Détecter si ce groupe de notes forme un tuplet
     int? tupletNumber = _detectTupletNumber(notePositions, noteIndices);
 
-    segments.add(LayoutedBeamSegment(
-      level: level,
-      startX: firstStemX,
-      endX: lastStemX,
-      y: y,
-      noteIndices: noteIndices,
-      tupletNumber: tupletNumber,
-    ));
+    segments.add(
+      LayoutedBeamSegment(
+        level: level,
+        startX: firstStemX,
+        endX: lastStemX,
+        y: y,
+        noteIndices: noteIndices,
+        tupletNumber: tupletNumber,
+      ),
+    );
   }
 
   /// Ajoute un beam coupé (partial beam) pour une note isolée.
   static void _addPartialBeam(
     List<LayoutedBeamSegment> segments,
-    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<({double x, NoteEvent event, DurationFraction position})>
+    notePositions,
     List<int> group,
     int noteIndex,
     int level,
     double y,
   ) {
-    final double stemX = notePositions[noteIndex].x + EngravingDefaults.stemDownXOffset;
-    final double beamLength = EngravingDefaults.beamThickness * 3; // Longueur du beam coupé
+    final double stemX =
+        notePositions[noteIndex].x + EngravingDefaults.stemDownXOffset;
+    final double beamLength =
+        EngravingDefaults.beamThickness * 3; // Longueur du beam coupé
 
     // Déterminer les positions du beam coupé
     final int positionInGroup = group.indexOf(noteIndex);
@@ -275,20 +319,23 @@ class BeamEngine {
     // Détecter si cette note fait partie d'un tuplet
     int? tupletNumber = _detectTupletNumber(notePositions, [noteIndex]);
 
-    segments.add(LayoutedBeamSegment(
-      level: level,
-      startX: startX,
-      endX: endX,
-      y: y,
-      noteIndices: [noteIndex],
-      tupletNumber: tupletNumber,
-    ));
+    segments.add(
+      LayoutedBeamSegment(
+        level: level,
+        startX: startX,
+        endX: endX,
+        y: y,
+        noteIndices: [noteIndex],
+        tupletNumber: tupletNumber,
+      ),
+    );
   }
 
   /// Détecte si un groupe de notes forme un tuplet et retourne le numéro.
   /// Retourne null si ce n'est pas un tuplet ou si les notes n'ont pas toutes le même tuplet.
   static int? _detectTupletNumber(
-    List<({double x, NoteEvent event, DurationFraction position})> notePositions,
+    List<({double x, NoteEvent event, DurationFraction position})>
+    notePositions,
     List<int> noteIndices,
   ) {
     if (noteIndices.isEmpty) return null;
@@ -305,7 +352,7 @@ class BeamEngine {
 
       if (tuplet == null) {
         // Si une note n'a pas de tuplet, le groupe n'est pas un tuplet
-        continue; // On continue pour voir s'il y a d'autres notes avec tuplet
+        return null; // On continue pour voir s'il y a d'autres notes avec tuplet
       }
 
       hasTuplet = true;

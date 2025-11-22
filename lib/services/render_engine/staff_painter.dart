@@ -91,7 +91,11 @@ class StaffPainter extends CustomPainter {
         }
 
         // Dessiner les notes (positions absolues déjà calculées)
-        for (int noteIndex = 0; noteIndex < measureLayout.notes.length; noteIndex++) {
+        for (
+          int noteIndex = 0;
+          noteIndex < measureLayout.notes.length;
+          noteIndex++
+        ) {
           final note = measureLayout.notes[noteIndex];
           final String glyph = NoteEventHelper.getSymbol(note.noteModel);
           final Rect symbolBounds = GlyphPainter.drawGlyph(
@@ -137,10 +141,14 @@ class StaffPainter extends CustomPainter {
           );
 
           // Dessiner le numéro de tuplet si ce beam en a un
-          if (beam.tupletNumber != null && beam.level == 0) {
-            // Seulement sur le beam principal (level 0) pour éviter les doublons
+          if (beam.tupletNumber != null) {
             final double centerX = (beam.startX + beam.endX) / 2;
-            final double tupletY = beam.y + EngravingDefaults.symbolFontSize * 0.8;
+
+            // Position Y uniforme : toujours sous le beam le plus bas (niveau 0)
+            // Calculer la position du beam niveau 0 pour ce groupe
+            final double baseBeamY = staffY + EngravingDefaults.stemLength;
+            final double tupletY =
+                baseBeamY + EngravingDefaults.symbolFontSize * 0.5;
 
             _drawTupletNumber(
               canvas,
@@ -151,12 +159,12 @@ class StaffPainter extends CustomPainter {
         }
 
         // Dessiner une barre à la fin de chaque mesure
-          _drawBarlineSymbol(
-            canvas,
-            MusicSymbols.barlineSingle,
-            measureLayout.barlineXStart -1,
-            staffY,
-          );
+        _drawBarlineSymbol(
+          canvas,
+          MusicSymbols.barlineSingle,
+          measureLayout.barlineXStart - 1,
+          staffY,
+        );
 
         // Dessiner une barre à la fin de chaque système
         if (i == system.measures.length - 1) {
@@ -289,8 +297,8 @@ class StaffPainter extends CustomPainter {
       bottomGroupWidth += bottomPainters[i].width;
       if (i < bottomPainters.length - 1) {
         bottomGroupWidth += timeSigSpacing;
-}
-}
+      }
+    }
 
     // 5. Alignement centré : utiliser la largeur maximale
     final double maxWidth = topGroupWidth > bottomGroupWidth
@@ -307,7 +315,7 @@ class StaffPainter extends CustomPainter {
     final double topY = centerY - fontSize * 0.7;
     final double bottomY = centerY + fontSize * 0.7;
 
-//8.Dessinerleschiffresduhaut(alignéscentrés)
+    //8.Dessinerleschiffresduhaut(alignéscentrés)
     double currentX = baseX + (maxWidth - topGroupWidth) / 2;
     for (int i = 0; i < topPainters.length; i++) {
       final painter = topPainters[i];
@@ -393,15 +401,23 @@ class StaffPainter extends CustomPainter {
       maxDuration: measure.maxDuration,
     );
 
-    final double notesStartX = containingMeasure.barlineXStart + EngravingDefaults.spaceBeforeBarline;
-    final double notesEndX = containingMeasure.barlineXEnd - EngravingDefaults.spaceBeforeBarline;
+    final double notesStartX =
+        containingMeasure.barlineXStart + EngravingDefaults.spaceBeforeBarline;
+    final double notesEndX =
+        containingMeasure.barlineXEnd - EngravingDefaults.spaceBeforeBarline;
     final double notesSpan = notesEndX - notesStartX;
     final double cursorX = notesStartX + normalized * notesSpan;
 
     // Dessiner le curseur
     final double extent = EngravingDefaults.staffSpace * 2.5;
-    final double top = (containingSystem.staffY - extent).clamp(0.0, size.height);
-    final double bottom = (containingSystem.staffY + extent).clamp(0.0, size.height);
+    final double top = (containingSystem.staffY - extent).clamp(
+      0.0,
+      size.height,
+    );
+    final double bottom = (containingSystem.staffY + extent).clamp(
+      0.0,
+      size.height,
+    );
 
     canvas.drawLine(
       Offset(cursorX, top),
@@ -410,13 +426,8 @@ class StaffPainter extends CustomPainter {
     );
   }
 
-
   /// Dessine un numéro de tuplet à la position donnée en utilisant les glyphes SMuFL.
-  void _drawTupletNumber(
-    Canvas canvas,
-    int number,
-    Offset position,
-  ) {
+  void _drawTupletNumber(Canvas canvas, int number, Offset position) {
     // Utiliser le glyphe SMuFL spécifique pour les tuplets
     final String tupletGlyph = MusicSymbols.tupletDigit(number);
 
@@ -425,7 +436,9 @@ class StaffPainter extends CustomPainter {
         text: tupletGlyph,
         style: TextStyle(
           fontFamily: 'Bravura',
-          fontSize: EngravingDefaults.symbolFontSize * 0.8, // Taille appropriée pour les tuplets
+          fontSize:
+              EngravingDefaults.symbolFontSize *
+              0.8, // Taille appropriée pour les tuplets
           color: Colors.black,
         ),
       ),
