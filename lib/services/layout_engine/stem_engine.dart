@@ -33,7 +33,7 @@ class StemEngine {
     bool isBeamed,
     double? beamBaseY,
   ) {
-    if (event.isRest || event.duration.reduce() == DurationFraction.whole) {
+    if (event.isRest || event.actualDuration.reduce() == DurationFraction.whole) {
       return (x: noteX, startY: staffY, endY: staffY);
     }
 

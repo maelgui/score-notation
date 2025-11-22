@@ -38,7 +38,7 @@ class Measure {
   DurationFraction get totalDuration {
     return events.fold<DurationFraction>(
       const DurationFraction(0, 1),
-      (sum, event) => sum.add(event.duration),
+      (sum, event) => sum.add(event.actualDuration),
     );
   }
 
@@ -63,10 +63,13 @@ class Measure {
   factory Measure.empty(TimeSignature timeSignature, int number) {
     // Créer des silences pour chaque temps
     final restDuration = DurationFraction(1, timeSignature.denominator);
+    // NoteDuration from restDuration
+    final writenDuration = restDuration.toNoteDuration();
     final events = List.generate(
       timeSignature.numerator,
       (_) => NoteEvent(
-        duration: restDuration,
+        actualDuration: restDuration,
+        writenDuration: writenDuration!,
         isRest: true,
       ),
     );

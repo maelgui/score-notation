@@ -72,20 +72,11 @@ class StaffPainter extends CustomPainter {
         final measureLayout = system.measures[i];
         final measure = measureLayout.measureModel;
 
-        // Bounding box de la mesure pour le hit-testing
-        // final debugRect = Rect.fromLTWH(
-        //   measureLayout.origin.dx,
-        //   measureLayout.origin.dy,
-        //   measureLayout.width,
-        //   measureLayout.height,
-        // );
-        final debugRect = measureLayout.boundingBox;
-
         // Stocker le bounding box avec l'index de la mesure dans le score
         // On doit trouver l'index de la mesure dans le score
         final measureIndex = score.measures.indexOf(measure);
         if (measureIndex >= 0) {
-          allMeasureBounds[measureIndex] = debugRect;
+          allMeasureBounds[measureIndex] = measureLayout.boundingBox;
         }
 
         // Dessiner la signature rythmique pour la première mesure

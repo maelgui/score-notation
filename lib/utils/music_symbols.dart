@@ -97,7 +97,15 @@ enum NoteDuration {
   thirtySecond, // Triple croche
 }
 
-extension NoteDurationExtension on NoteDuration {
+extension WrittenDurationExtension on NoteDuration {
+  NoteDuration? nextShorter() {
+    final index = NoteDuration.values.indexOf(this);
+    if (index + 1 < NoteDuration.values.length) {
+      return NoteDuration.values[index + 1];
+    }
+    return null; // already shortest
+  }
+
   String get symbol {
     switch (this) {
       case NoteDuration.whole:

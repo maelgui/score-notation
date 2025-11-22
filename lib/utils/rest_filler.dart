@@ -38,7 +38,8 @@ class RestFiller {
         partFraction = DurationConverter.fromDouble(part);
       }
       rests.add(NoteEvent(
-        duration: partFraction,
+        actualDuration: partFraction,
+        writenDuration: partFraction.toNoteDuration()!,
         isRest: true,
       ));
     }

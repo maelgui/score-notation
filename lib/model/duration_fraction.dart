@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:snare_notation/utils/music_symbols.dart';
 
 /// Représente une durée musicale comme une fraction rationnelle exacte.
 ///
@@ -175,5 +176,24 @@ class DurationFraction {
   static const DurationFraction eighth = DurationFraction(1, 8);
   static const DurationFraction sixteenth = DurationFraction(1, 16);
   static const DurationFraction thirtySecond = DurationFraction(1, 32);
+
+  /// Convertit une fraction en NoteDuration.
+  NoteDuration? toNoteDuration() {
+    final reduced = reduce();
+    if (reduced == whole) {
+      return NoteDuration.whole;
+    } else if (reduced == half) {
+      return NoteDuration.half;
+    } else if (reduced == quarter) {
+      return NoteDuration.quarter;
+    } else if (reduced == eighth) {
+      return NoteDuration.eighth;
+    } else if (reduced == sixteenth) {
+      return NoteDuration.sixteenth;
+    } else if (reduced == thirtySecond) {
+      return NoteDuration.thirtySecond;
+    }
+    return null;
+  }
 }
 

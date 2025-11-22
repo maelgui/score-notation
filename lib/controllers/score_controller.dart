@@ -11,21 +11,19 @@ import '../utils/constants.dart';
 import '../utils/duration_converter.dart';
 import '../utils/music_symbols.dart';
 
-
-enum SelectedSymbol { right, left, rest }
+enum SelectedSymbol { right, left, rest, triplet }
 
 enum ModificationSymbol { accent, flam, drag, roll }
 
-
 /// Contrôleur pour gérer la logique métier de la partition.
-/// 
+///
 /// Extrait toute la logique de manipulation de la partition du widget UI.
 class ScoreController {
   ScoreController({
     required StorageService storageService,
     int defaultBarCount = AppConstants.defaultBarCount,
-  })  : _storageService = storageService,
-        _defaultBarCount = defaultBarCount;
+  }) : _storageService = storageService,
+       _defaultBarCount = defaultBarCount;
 
   final StorageService _storageService;
   final int _defaultBarCount;
@@ -68,7 +66,8 @@ class ScoreController {
 
   /// Change le nombre de mesures.
   void setMeasureCount(int newCount) {
-    if (newCount < AppConstants.minBarCount || newCount > AppConstants.maxBarCount) {
+    if (newCount < AppConstants.minBarCount ||
+        newCount > AppConstants.maxBarCount) {
       return;
     }
 
@@ -89,7 +88,7 @@ class ScoreController {
   }
 
   /// Ajoute une note dans une mesure.
-  /// 
+  ///
   /// [measureIndex] : Index de la mesure (0-based)
   /// [eventIndex] : Index de l'événement à remplacer
   /// [selectedSymbol] : Symbole sélectionné (pour déterminer l'ornement/accent)
@@ -98,7 +97,7 @@ class ScoreController {
     int measureIndex, {
     required int eventIndex,
     required SelectedSymbol selectedSymbol,
-    NoteDuration? selectedDuration,
+    required NoteDuration selectedDuration,
   }) async {
     if (measureIndex < 0 || measureIndex >= _score.measures.length) {
       return;
@@ -111,32 +110,98 @@ class ScoreController {
       return;
     }
 
+    // Cas spécial : triolet
+    if (selectedSymbol == SelectedSymbol.triplet) {
+      await _addTriplet(measureIndex, eventIndex, selectedDuration);
+      return;
+    }
+
     // Déterminer la durée de l'événement à placer
-    final DurationFraction eventDuration = selectedDuration != null
-        ? DurationConverter.toFraction(selectedDuration)
-        : DurationFraction.quarter;
-    
+    final DurationFraction eventDuration = DurationConverter.toFraction(
+      selectedDuration,
+    );
+
     final bool isRest = selectedSymbol == SelectedSymbol.rest;
     final bool placeAboveLine = selectedSymbol == SelectedSymbol.right;
-    
+
     // Pas d'ornement ni d'accent
     final Ornament? ornament = null;
     final Accent? accent = null;
 
     // Créer le NoteEvent
     final noteEvent = NoteEvent(
-      duration: eventDuration,
+      actualDuration: eventDuration,
+      writenDuration: selectedDuration,
       isRest: isRest,
       ornament: ornament,
       accent: accent,
       isAboveLine: placeAboveLine,
     );
-    
+
     // Insérer la note dans la mesure (remplace toujours l'événement à l'index)
-    final updatedMeasure = MeasureEditor.insertNote(
+    final updatedMeasure = MeasureEditor.insertNotes(
       measure,
       eventIndex,
-      noteEvent,
+      [noteEvent],
+    );
+
+    final updatedMeasures = <Measure>[..._score.measures];
+    updatedMeasures[measureIndex] = updatedMeasure;
+    _score = _score.copyWith(measures: updatedMeasures);
+
+    await saveScore();
+  }
+
+  /// Ajoute un triolet de la durée sélectionnée.
+  Future<void> _addTriplet(
+    int measureIndex,
+    int eventIndex,
+    NoteDuration selectedDuration,
+  ) async {
+    final measure = _score.measures[measureIndex];
+
+    // Durée de base du triolet
+    final baseDuration = DurationConverter.toFraction(selectedDuration);
+    final writenDuration = selectedDuration.nextShorter();
+
+    if (writenDuration == null) {
+      return;
+    }
+
+    // Durée de chaque note du triolet (2/3 de la durée de base)
+    final tripletNoteDuration = DurationFraction(
+      baseDuration.numerator,
+      baseDuration.denominator * 3,
+    );
+
+    // Créer 3 notes du triolet (alternant droite/gauche)
+    final tripletNotes = [
+      NoteEvent(
+        actualDuration: tripletNoteDuration,
+        writenDuration: writenDuration,
+        isRest: false,
+        isAboveLine: true, // Droite
+      ),
+      NoteEvent(
+        actualDuration: tripletNoteDuration,
+        writenDuration: writenDuration,
+        isRest: false,
+        isAboveLine: false, // Gauche
+      ),
+      NoteEvent(
+        actualDuration: tripletNoteDuration,
+        writenDuration: writenDuration,
+        isRest: false,
+        isAboveLine: true, // Droite
+      ),
+    ];
+
+    // Insérer les 3 notes du triolet
+    Measure updatedMeasure = measure;
+    updatedMeasure = MeasureEditor.insertNotes(
+      updatedMeasure,
+      eventIndex,
+      tripletNotes,
     );
 
     final updatedMeasures = <Measure>[..._score.measures];
@@ -147,7 +212,7 @@ class ScoreController {
   }
 
   /// Modifie une note existante à l'index donné dans une mesure.
-  /// 
+  ///
   /// [measureIndex] : Index de la mesure (0-based)
   /// [eventIndex] : Index de l'événement à modifier
   /// [accent] : Accent à appliquer (null pour retirer)
@@ -170,22 +235,19 @@ class ScoreController {
     }
 
     final event = measure.events[eventIndex];
-    
+
     // Ne modifier que les notes (pas les silences)
     if (event.isRest) {
       return;
     }
 
     // Créer une copie modifiée de l'événement
-    final modifiedEvent = event.copyWith(
-      accent: accent,
-      ornament: ornament,
-    );
+    final modifiedEvent = event.copyWith(accent: accent, ornament: ornament);
 
     // Remplacer l'événement dans la mesure
     final updatedEvents = <NoteEvent>[...measure.events];
     updatedEvents[eventIndex] = modifiedEvent;
-    
+
     final updatedMeasure = measure.copyWith(events: updatedEvents);
     final updatedMeasures = <Measure>[..._score.measures];
     updatedMeasures[measureIndex] = updatedMeasure;
@@ -195,7 +257,7 @@ class ScoreController {
   }
 
   /// Trouve la note la plus proche d'une position donnée.
-  /// 
+  ///
   /// Retourne la position exacte de la note trouvée, ou null si aucune note n'est proche.
   DurationFraction? findClosestNotePosition(int measureIndex, double position) {
     if (measureIndex < 0 || measureIndex >= _score.measures.length) {
@@ -211,7 +273,9 @@ class ScoreController {
     final positionFraction = DurationConverter.fromDouble(clampedPosition);
 
     // Vérifier s'il y a une note à cette position
-    final eventsWithPositions = MeasureEditor.extractEventsWithPositions(measure);
+    final eventsWithPositions = MeasureEditor.extractEventsWithPositions(
+      measure,
+    );
 
     // Trouver l'événement le plus proche de la position cliquée
     DurationFraction? closestPosition;
@@ -221,10 +285,12 @@ class ScoreController {
       // Calculer la distance en comparant les positions réduites
       final entryPosReduced = entry.position.reduce();
       final clickedPosReduced = positionFraction.reduce();
-      final distance = (entryPosReduced.toDouble() - clickedPosReduced.toDouble()).abs();
+      final distance =
+          (entryPosReduced.toDouble() - clickedPosReduced.toDouble()).abs();
 
       // Tolérance : un huitième de noire
-      if (distance < minDistance && distance < AppConstants.noteSelectionTolerance) {
+      if (distance < minDistance &&
+          distance < AppConstants.noteSelectionTolerance) {
         minDistance = distance;
         closestPosition = entry.position;
       }
@@ -284,4 +350,3 @@ class ScoreController {
     return fraction.toDouble() * 4;
   }
 }
-

@@ -29,13 +29,13 @@ class MeasureEditor {
     for (int i = 0; i < eventsWithPositions.length; i++) {
       final entry = eventsWithPositions[i];
       final eventStart = entry.position;
-      final eventEnd = eventStart.add(entry.event.duration);
+      final eventEnd = eventStart.add(entry.event.actualDuration);
       
       // Si on est dans cet événement
       if (position >= eventStart && position <= eventEnd) {
         final beforePosition = position.subtract(eventStart);
         final splitEvent = beforePosition > const DurationFraction(0, 1) && 
-                          beforePosition < entry.event.duration;
+                          beforePosition < entry.event.actualDuration;
         return (index: i, splitEvent: splitEvent);
       }
       
@@ -60,15 +60,15 @@ class MeasureEditor {
   /// 
   /// [measure] : La mesure à modifier
   /// [index] : Index dans la liste measure.events à remplacer (ou events.length pour insérer à la fin)
-  /// [noteEvent] : L'événement musical qui remplace
+  /// [noteEvents] : L'événement musical qui remplace
   /// 
   /// Retourne une nouvelle mesure avec la note insérée.
-  static Measure insertNote(
+  static Measure insertNotes(
     Measure measure,
     int index,
-    NoteEvent noteEvent,
+    List<NoteEvent> noteEvents,
   ) {
-    AppLogger.debug('insertNote: $measure, $index, $noteEvent');
+    AppLogger.debug('insertNote: $measure, $index, $noteEvents');
     AppLogger.debug('measure.events: ${measure.events}');
     final events = List<NoteEvent>.from(measure.events);
     final newEvents = <NoteEvent>[];
@@ -80,14 +80,17 @@ class MeasureEditor {
     
     if (index >= events.length) {
       // Insérer à la fin : ajouter la note directement
-      newEvents.add(noteEvent);
+      newEvents.addAll(noteEvents);
     } else {
       // Remplacer l'événement à l'index
       final targetEvent = events[index];
-      final noteDuration = noteEvent.duration;
-      final targetDuration = targetEvent.duration;
+      final noteDuration = noteEvents.fold<DurationFraction>(
+        const DurationFraction(0, 1),
+        (sum, event) => sum.add(event.actualDuration),
+      );
+      final targetDuration = targetEvent.actualDuration;
       
-      newEvents.add(noteEvent);
+      newEvents.addAll(noteEvents);
       
       if (noteDuration < targetDuration) {
         // Note plus petite : compléter avec des silences
@@ -107,7 +110,7 @@ class MeasureEditor {
         int nextIndex = index + 1;
         
         while (nextIndex < events.length && usedDuration < noteDuration) {
-          usedDuration = usedDuration.add(events[nextIndex].duration);
+          usedDuration = usedDuration.add(events[nextIndex].actualDuration);
           nextIndex++;
         }
         
@@ -145,7 +148,7 @@ class MeasureEditor {
   ) {
     final totalDuration = events.fold<DurationFraction>(
       const DurationFraction(0, 1),
-      (sum, event) => sum.add(event.duration),
+      (sum, event) => sum.add(event.actualDuration),
     );
 
     final remaining = maxDuration.subtract(totalDuration);
@@ -166,7 +169,7 @@ class MeasureEditor {
 
     for (final event in measure.events) {
       result.add((position: currentPosition, event: event));
-      currentPosition = currentPosition.add(event.duration);
+      currentPosition = currentPosition.add(event.actualDuration);
     }
 
     return result;

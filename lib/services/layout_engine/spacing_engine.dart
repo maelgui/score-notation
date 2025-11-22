@@ -27,8 +27,8 @@ class SpacingEngine {
 
     // Trouver la plus petite subdivision de la mesure
     final smallestSubdivision = measure.events
-        .reduce((a, b) => a.duration.reduce() < b.duration.reduce() ? a : b)
-        .duration
+        .reduce((a, b) => a.actualDuration.reduce() < b.actualDuration.reduce() ? a : b)
+        .actualDuration
         .reduce();
 
     // Calculer le nombre équivalent de cette subdivision dans la mesure
@@ -90,7 +90,7 @@ class SpacingEngine {
       
       positions.add((eventIndex: i, x: x));
       
-      currentPosition = currentPosition.add(event.duration);
+      currentPosition = currentPosition.add(event.actualDuration);
     }
 
     return positions;

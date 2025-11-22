@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:snare_notation/utils/music_symbols.dart';
 
 import 'accent.dart';
 import 'duration_fraction.dart';
@@ -11,7 +12,8 @@ import 'tuplet_info.dart';
 @immutable
 class NoteEvent {
   const NoteEvent({
-    required this.duration,
+    required this.actualDuration,
+    required this.writenDuration,
     this.tuplet,
     this.ornament,
     this.accent,
@@ -20,7 +22,10 @@ class NoteEvent {
   });
 
   /// Durée de l'événement.
-  final DurationFraction duration;
+  final DurationFraction actualDuration;
+
+  /// Durée écrite de l'événement.
+  final NoteDuration writenDuration;
 
   /// Information sur le tuplet si applicable.
   final TupletInfo? tuplet;
@@ -40,6 +45,7 @@ class NoteEvent {
 
   NoteEvent copyWith({
     DurationFraction? duration,
+    NoteDuration? writenDuration,
     TupletInfo? tuplet,
     Ornament? ornament,
     Accent? accent,
@@ -47,7 +53,8 @@ class NoteEvent {
     bool? isAboveLine,
   }) {
     return NoteEvent(
-      duration: duration ?? this.duration,
+      actualDuration: duration ?? this.actualDuration,
+      writenDuration: writenDuration ?? this.writenDuration,
       tuplet: tuplet ?? this.tuplet,
       ornament: ornament ?? this.ornament,
       accent: accent ?? this.accent,
@@ -60,7 +67,7 @@ class NoteEvent {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! NoteEvent) return false;
-    return duration == other.duration &&
+    return actualDuration == other.actualDuration &&
         tuplet == other.tuplet &&
         ornament == other.ornament &&
         accent == other.accent &&
@@ -70,22 +77,24 @@ class NoteEvent {
 
   @override
   int get hashCode {
-    return Object.hash(duration, tuplet, ornament, accent, isRest, isAboveLine);
+    return Object.hash(actualDuration, tuplet, ornament, accent, isRest, isAboveLine);
   }
 
   @override
   String toString() {
     final String base = isRest ? 'Rest' : 'Note';
-    final String dur = duration.toString();
+    final String dur = actualDuration.toString();
+    final String wdur = writenDuration.name;
     final String tup = tuplet != null ? ' (${tuplet.toString()})' : '';
     final String orn = ornament != null ? ' ${ornament.toString()}' : '';
     final String acc = accent != null ? ' ${accent.toString()}' : '';
     final String pos = isRest ? '' : (isAboveLine ? ' ↑' : ' ↓');
-    return '$base($dur$tup$orn$acc$pos)';
+    return '$base($dur$wdur$tup$orn$acc$pos)';
   }
 
   Map<String, dynamic> toJson() => {
-        'duration': duration.toJson(),
+        'duration': actualDuration.toJson(),
+        'writenDuration': writenDuration.name,
         if (tuplet != null) 'tuplet': tuplet!.toJson(),
         if (ornament != null) 'ornament': ornament!.toJson(),
         if (accent != null) 'accent': accent!.toJson(),
@@ -95,8 +104,11 @@ class NoteEvent {
 
   factory NoteEvent.fromJson(Map<String, dynamic> json) {
     return NoteEvent(
-      duration: DurationFraction.fromJson(
+      actualDuration: DurationFraction.fromJson(
         json['duration'] as Map<String, dynamic>,
+      ),
+      writenDuration: NoteDuration.values.byName(
+        json['writenDuration'] as String
       ),
       tuplet: json['tuplet'] != null
           ? TupletInfo.fromJson(json['tuplet'] as Map<String, dynamic>)

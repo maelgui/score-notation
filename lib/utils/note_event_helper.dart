@@ -16,7 +16,7 @@ class NoteEventHelper {
       //   return duration.restSymbol;
       // }
       // Si la durée n'est pas reconnue, essayer de déterminer le symbole directement
-      final reduced = event.duration.reduce();
+      final reduced = event.actualDuration.reduce();
       if (reduced == DurationFraction.whole) {
         return MusicSymbols.restWhole;
       } else if (reduced == DurationFraction.half) {
@@ -39,7 +39,7 @@ class NoteEventHelper {
       
       // Déterminer le symbole de base selon la durée
         // Si la durée n'est pas reconnue, essayer de déterminer le symbole directement
-        final reduced = event.duration.reduce();
+        final reduced = event.actualDuration.reduce();
         if (reduced == DurationFraction.whole) {
           return MusicSymbols.noteheadWhole;
         } else if (reduced == DurationFraction.half) {

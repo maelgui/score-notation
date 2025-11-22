@@ -82,6 +82,11 @@ class _StaffScreenState extends State<StaffScreen> {
       id: SelectedSymbol.rest,
       symbol: MusicSymbols.restQuarter,
     ),
+    PaletteSymbol(
+      label: 'Triolet',
+      id: SelectedSymbol.triplet,
+      symbol: '3', // Chiffre 3 pour représenter le triolet
+    ),
   ];
 
   static final List<PaletteSymbol<ModificationSymbol>> _modificationSymbols = [
@@ -355,11 +360,14 @@ class _StaffScreenState extends State<StaffScreen> {
     int eventIndex,
     bool placeAboveLine,
   ) async {
+    if (_selectedDuration == null) {
+      return;
+    }
     await _scoreController.addNoteAtBeat(
       measureIndex,
       eventIndex: eventIndex,
       selectedSymbol: _selectedSymbol,
-      selectedDuration: _selectedDuration,
+      selectedDuration: _selectedDuration!,
     );
     if (!mounted) return;
     setState(() {});
@@ -395,7 +403,7 @@ class _StaffScreenState extends State<StaffScreen> {
       
       // Mettre à jour la durée sélectionnée avec celle de la note
       final selectedEvent = measure.events[eventIndex];
-      final NoteDuration? correspondingDuration = DurationConverter.fromFraction(selectedEvent.duration);
+      final NoteDuration? correspondingDuration = DurationConverter.fromFraction(selectedEvent.actualDuration);
       
       setState(() {
         _selectedMeasureIndex = measureIndex;
@@ -478,6 +486,9 @@ class _StaffScreenState extends State<StaffScreen> {
   /// Gère la sélection d'un symbole dans la palette.
   /// Remplace la note sélectionnée
   Future<void> _handleSymbolSelected(SelectedSymbol symbol) async {
+    if (_selectedDuration == null) {
+      return;
+    }
     setState(() {
       _selectedSymbol = symbol;
     });
@@ -494,7 +505,7 @@ class _StaffScreenState extends State<StaffScreen> {
         _selectedMeasureIndex!,
         eventIndex: _selectedEventIndex!,
         selectedSymbol: symbol,
-        selectedDuration: _selectedDuration,
+        selectedDuration: _selectedDuration!,
       );
 
       // Selection la note suivante

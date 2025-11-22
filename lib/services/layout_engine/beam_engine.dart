@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'package:snare_notation/utils/music_symbols.dart';
+
 import '../../model/measure.dart';
 import '../../model/duration_fraction.dart';
 import '../../model/note_event.dart';
@@ -34,12 +36,10 @@ class BeamEngine {
 
     for (int i = 0; i < notePositions.length; i++) {
       final note = notePositions[i];
-      final reduced = note.event.duration.reduce();
+      final reduced = note.event.actualDuration.reduce();
       
       // Vérifier si cette note doit être beamed (eighth, sixteenth, thirty-second)
-      final bool shouldBeam = reduced == DurationFraction.eighth ||
-                              reduced == DurationFraction.sixteenth ||
-                              reduced == DurationFraction.thirtySecond;
+      final bool shouldBeam = reduced < oneBeat;
 
       // Vérifier si cette note peut être beamed (eighth, sixteenth, thirty-second)
       // ou si c'est un silence qui peut être dans un groupe beamed
@@ -64,20 +64,20 @@ class BeamEngine {
             // Calculer la position attendue après la dernière note du groupe
             DurationFraction expectedPosition = lastNote.position;
             for (int j = lastNoteIndex; j < i; j++) {
-              expectedPosition = expectedPosition.add(notePositions[j].event.duration);
+              expectedPosition = expectedPosition.add(notePositions[j].event.actualDuration);
             }
             isConsecutive = (note.position.subtract(expectedPosition).numerator.abs() < 2);
           }
         }
 
         // Vérifier si on peut ajouter cette note au groupe actuel sans dépasser 1 temps
-        final DurationFraction newGroupDuration = currentGroupDuration.add(note.event.duration);
+        final DurationFraction newGroupDuration = currentGroupDuration.add(note.event.actualDuration);
         final bool exceedsOneBeat = newGroupDuration > oneBeat;
 
         if (currentGroup.isEmpty) {
           // Nouveau groupe (notes beamed ou silences)
           currentGroup = [i];
-          currentGroupDuration = note.event.duration;
+          currentGroupDuration = note.event.actualDuration;
         } else if (isConsecutive && !exceedsOneBeat) {
           // Ajouter au groupe actuel (notes ou silences)
           currentGroup.add(i);
@@ -88,7 +88,7 @@ class BeamEngine {
             beamGroups.add(List.from(currentGroup));
           }
           currentGroup = [i];
-          currentGroupDuration = note.event.duration;
+          currentGroupDuration = note.event.actualDuration;
         }
       } else {
         // Note qui ne doit pas être beamed, terminer le groupe actuel
@@ -199,12 +199,12 @@ class BeamEngine {
       for (final noteIndex in group) {
         if (noteIndex >= notePositions.length) continue;
         final note = notePositions[noteIndex];
-        final reduced = note.event.duration.reduce();
+        final reduced = note.event.writenDuration;
         
         int beamCount = 1;
-        if (reduced == DurationFraction.sixteenth) {
+        if (reduced == NoteDuration.sixteenth) {
           beamCount = 2;
-        } else if (reduced == DurationFraction.thirtySecond) {
+        } else if (reduced == NoteDuration.thirtySecond) {
           beamCount = 3;
         }
         
