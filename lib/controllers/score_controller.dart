@@ -84,6 +84,14 @@ class ScoreController {
     _score = _normalizeMeasureNumbers(_score);
   }
 
+  /// Change le nombre de mesures par ligne.
+  void setMeasuresPerLine(int measuresPerLine) {
+    if (measuresPerLine < 1 || measuresPerLine > 16) {
+      return;
+    }
+    _score = _score.copyWith(measuresPerLine: measuresPerLine);
+  }
+
   /// Ajoute une note dans une mesure.
   ///
   /// [measureIndex] : Index de la mesure (0-based)
@@ -305,12 +313,13 @@ class ScoreController {
 
   // === Méthodes privées ===
 
-  Score _createDefaultScore(int count) {
+  Score _createDefaultScore(int count, {int measuresPerLine = 4}) {
     return Score(
       measures: List.generate(
         count,
         (index) => _createDefaultMeasure(index + 1),
       ),
+      measuresPerLine: measuresPerLine,
     );
   }
 

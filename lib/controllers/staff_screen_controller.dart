@@ -31,7 +31,6 @@ class StaffScreenController extends ChangeNotifier {
 
   // État de l'interface
   bool _isLoading = true;
-  int _measuresPerLine = 4;
 
   // État de sélection
   SelectedSymbol _selectedSymbol = SelectedSymbol.right;
@@ -42,7 +41,7 @@ class StaffScreenController extends ChangeNotifier {
 
   // Getters
   bool get isLoading => _isLoading;
-  int get measuresPerLine => _measuresPerLine;
+  int get measuresPerLine => _scoreController.score.measuresPerLine;
   SelectedSymbol get selectedSymbol => _selectedSymbol;
   NoteDuration? get selectedDuration => _selectedDuration;
   int? get selectedMeasureIndex => _selectedMeasureIndex;
@@ -66,7 +65,6 @@ class StaffScreenController extends ChangeNotifier {
   Future<void> initialize() async {
     try {
       await _scoreController.initialize();
-      _measuresPerLine = _defaultMeasuresPerLine;
       _isLoading = false;
       notifyListeners();
     } catch (error) {
@@ -79,8 +77,9 @@ class StaffScreenController extends ChangeNotifier {
 
   /// Change le nombre de mesures par ligne
   void setMeasuresPerLine(int count) {
-    if (_measuresPerLine != count) {
-      _measuresPerLine = count;
+    if (measuresPerLine != count) {
+      _scoreController.setMeasuresPerLine(count);
+      _scoreController.saveScore();
       notifyListeners();
     }
   }
