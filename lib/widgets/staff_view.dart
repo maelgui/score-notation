@@ -8,7 +8,6 @@ import '../services/render_engine/staff_painter.dart';
 import '../utils/constants.dart';
 import '../utils/measure_editor.dart';
 import '../utils/smufl/engraving_defaults.dart';
-import '../main.dart';
 
 /// Widget principal pour la zone de dessin de la portée.
 ///
@@ -18,7 +17,6 @@ class StaffView extends StatelessWidget {
   const StaffView({
     super.key,
     required this.score,
-    required this.editMode,
     this.cursorPosition,
     this.selectedNotes = const {},
     this.measuresPerLine = 4,
@@ -31,7 +29,6 @@ class StaffView extends StatelessWidget {
   });
 
   final Score score;
-  final EditMode editMode;
   final StaffCursorPosition? cursorPosition;
   final Set<NoteSelectionReference> selectedNotes;
   final int measuresPerLine;
@@ -75,12 +72,12 @@ class StaffView extends StatelessWidget {
                 final double notesStartX = measureLayout.barlineXStart + EngravingDefaults.spaceBeforeBarline;
                 final double notesEndX = measureLayout.barlineXEnd - EngravingDefaults.spaceBeforeBarline;
                 final double notesSpan = notesEndX - notesStartX;
-                
+
                 if (notesSpan <= 0) continue;
 
                 final double normalized = ((relativeX - EngravingDefaults.spaceBeforeBarline) / notesSpan).clamp(0.0, 1.0);
                 final measure = measureLayout.measureModel;
-                
+
                 // Convertir la position normalisée en DurationFraction
                 final clamped = normalized.clamp(0.0, 1.0);
                 final int cursorPrecision = 2048;
@@ -94,7 +91,7 @@ class StaffView extends StatelessWidget {
 
                 // Utiliser MeasureEditor pour trouver l'eventIndex et isAfterEvent
                 final eventInfo = MeasureEditor.findEventIndex(measure, positionInMeasure);
-                
+
                 return StaffCursorPosition(
                   measureIndex: measureIndex,
                   eventIndex: eventInfo.index,
@@ -129,7 +126,7 @@ class StaffView extends StatelessWidget {
               // Chercher la note la plus proche dans cette mesure
               for (int noteIndex = 0; noteIndex < measureLayout.notes.length; noteIndex++) {
                 final note = measureLayout.notes[noteIndex];
-                
+
                 // Utiliser le bounding box de la note pour le hit-testing
                 if (note.boundingBox.contains(details.localPosition)) {
                   final double distance = (details.localPosition - note.noteheadPosition).distance;
@@ -173,7 +170,6 @@ class StaffView extends StatelessWidget {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (details) {
-
             // Find measure index that contains the tap position
             final cursor = resolveCursor(details.localPosition);
 
@@ -182,44 +178,30 @@ class StaffView extends StatelessWidget {
             }
 
             final hit = resolveTapTarget(details);
-            if (editMode == EditMode.write) {
-              if (hit != null) {
-                onBeatSelected(hit.measureIndex, hit.eventIndex, hit.placeAboveLine);
-              }
+            if (hit != null) {
+              onBeatSelected(hit.measureIndex, hit.eventIndex, hit.placeAboveLine);
             } else {
-              if (hit != null) {
-                onBeatSelected(hit.measureIndex, hit.eventIndex, hit.placeAboveLine);
-              } else {
-                onSelectionCleared?.call();
-              }
+              onSelectionCleared?.call();
             }
           },
-          onPanStart: editMode == EditMode.select
-              ? (details) {
-                  final cursor = resolveCursor(details.localPosition);
-                  if (cursor == null) return;
-                  onCursorChanged?.call(cursor);
-                  onSelectionDragStart?.call(cursor);
-                }
-              : null,
-          onPanUpdate: editMode == EditMode.select
-              ? (details) {
-                  final cursor = resolveCursor(details.localPosition);
-                  if (cursor == null) return;
-                  onCursorChanged?.call(cursor);
-                  onSelectionDragUpdate?.call(cursor);
-                }
-              : null,
-          onPanEnd: editMode == EditMode.select
-              ? (_) {
-                  onSelectionDragEnd?.call();
-                }
-              : null,
-          onPanCancel: editMode == EditMode.select
-              ? () {
-                  onSelectionDragEnd?.call();
-                }
-              : null,
+          onPanStart: (details) {
+            final cursor = resolveCursor(details.localPosition);
+            if (cursor == null) return;
+            onCursorChanged?.call(cursor);
+            onSelectionDragStart?.call(cursor);
+          },
+          onPanUpdate: (details) {
+            final cursor = resolveCursor(details.localPosition);
+            if (cursor == null) return;
+            onCursorChanged?.call(cursor);
+            onSelectionDragUpdate?.call(cursor);
+          },
+          onPanEnd: (_) {
+            onSelectionDragEnd?.call();
+          },
+          onPanCancel: () {
+            onSelectionDragEnd?.call();
+          },
           child: Builder(
             builder: (context) {
 

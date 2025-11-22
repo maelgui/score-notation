@@ -10,10 +10,7 @@ import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../utils/duration_converter.dart';
 import '../utils/music_symbols.dart';
-
-enum SelectedSymbol { right, left, rest, triplet }
-
-enum ModificationSymbol { accent, flam, drag, roll }
+import '../widgets/unified_palette.dart';
 
 /// Contrôleur pour gérer la logique métier de la partition.
 ///

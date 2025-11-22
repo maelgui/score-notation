@@ -44,7 +44,7 @@ class NoteEvent {
   final bool isAboveLine;
 
   NoteEvent copyWith({
-    DurationFraction? duration,
+    DurationFraction? actualDuration,
     NoteDuration? writenDuration,
     TupletInfo? tuplet,
     Ornament? ornament,
@@ -53,7 +53,7 @@ class NoteEvent {
     bool? isAboveLine,
   }) {
     return NoteEvent(
-      actualDuration: duration ?? this.actualDuration,
+      actualDuration: actualDuration ?? this.actualDuration,
       writenDuration: writenDuration ?? this.writenDuration,
       tuplet: tuplet ?? this.tuplet,
       ornament: ornament ?? this.ornament,
@@ -77,7 +77,14 @@ class NoteEvent {
 
   @override
   int get hashCode {
-    return Object.hash(actualDuration, tuplet, ornament, accent, isRest, isAboveLine);
+    return Object.hash(
+      actualDuration,
+      tuplet,
+      ornament,
+      accent,
+      isRest,
+      isAboveLine,
+    );
   }
 
   @override
@@ -93,14 +100,14 @@ class NoteEvent {
   }
 
   Map<String, dynamic> toJson() => {
-        'duration': actualDuration.toJson(),
-        'writenDuration': writenDuration.name,
-        if (tuplet != null) 'tuplet': tuplet!.toJson(),
-        if (ornament != null) 'ornament': ornament!.toJson(),
-        if (accent != null) 'accent': accent!.toJson(),
-        'isRest': isRest,
-        'isAboveLine': isAboveLine,
-      };
+    'duration': actualDuration.toJson(),
+    'writenDuration': writenDuration.name,
+    if (tuplet != null) 'tuplet': tuplet!.toJson(),
+    if (ornament != null) 'ornament': ornament!.toJson(),
+    if (accent != null) 'accent': accent!.toJson(),
+    'isRest': isRest,
+    'isAboveLine': isAboveLine,
+  };
 
   factory NoteEvent.fromJson(Map<String, dynamic> json) {
     return NoteEvent(
@@ -108,7 +115,7 @@ class NoteEvent {
         json['duration'] as Map<String, dynamic>,
       ),
       writenDuration: NoteDuration.values.byName(
-        json['writenDuration'] as String
+        json['writenDuration'] as String,
       ),
       tuplet: json['tuplet'] != null
           ? TupletInfo.fromJson(json['tuplet'] as Map<String, dynamic>)
@@ -120,4 +127,3 @@ class NoteEvent {
     );
   }
 }
-

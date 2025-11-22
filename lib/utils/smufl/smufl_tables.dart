@@ -1,15 +1,14 @@
 import '../../model/duration_fraction.dart';
 import '../../model/ornament.dart';
-import '../music_symbols.dart';
 
 /// Tables de correspondance SMuFL.
-/// 
+///
 /// Mapping entre les entités musicales et les glyphs SMuFL.
 class SmuflTables {
   SmuflTables._();
 
   /// Retourne le glyph SMuFL pour une durée donnée.
-  /// 
+  ///
   /// Exemples :
   /// - whole note (ronde) → "noteWhole"
   /// - half note (blanche) → "noteHalfUp"
@@ -32,4 +31,3 @@ class SmuflTables {
     throw UnimplementedError('SmuflTables.getGlyphForRest not yet implemented');
   }
 }
-
