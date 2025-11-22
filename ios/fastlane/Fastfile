@@ -30,6 +30,9 @@ platform :ios do
       xcodeproj: "Runner.xcodeproj"
     })
     build_app(workspace: "Runner.xcworkspace", scheme: "Runner")
-    upload_to_testflight(skip_waiting_for_build_processing: true)
+    upload_to_testflight(
+        groups: ["Testeur DrumScore Editor"],
+      skip_waiting_for_build_processing: true
+    )
   end
 end
