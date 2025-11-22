@@ -3,6 +3,7 @@ import '../model/duration_fraction.dart';
 import '../model/note_event.dart';
 import '../model/ornament.dart';
 import '../model/score.dart';
+import '../model/score_metadata.dart';
 import '../model/time_signature.dart';
 import '../model/tuplet_info.dart';
 import '../model/measure.dart';
@@ -13,37 +14,67 @@ import '../utils/duration_converter.dart';
 import '../utils/music_symbols.dart';
 import '../widgets/unified_palette.dart';
 
-/// Contrôleur pour gérer la logique métier de la partition.
-///
-/// Extrait toute la logique de manipulation de la partition du widget UI.
-class ScoreController {
-  ScoreController({
+/// Contrôleur pour gérer une partition avec ses métadonnées.
+class ScoreWithMetadataController {
+  ScoreWithMetadataController({
     required StorageService storageService,
+    String? scoreId,
+    ScoreMetadata? metadata,
     int defaultBarCount = AppConstants.defaultBarCount,
   }) : _storageService = storageService,
+       _scoreId = scoreId,
+       _metadata = metadata,
        _defaultBarCount = defaultBarCount;
 
   final StorageService _storageService;
   final int _defaultBarCount;
 
+  String? _scoreId;
+  ScoreMetadata? _metadata;
   Score _score = const Score(measures: []);
+
+  /// ID de la partition actuelle.
+  String? get scoreId => _scoreId;
+
+  /// Métadonnées de la partition actuelle.
+  ScoreMetadata? get metadata => _metadata;
 
   /// Score actuel (lecture seule depuis l'extérieur).
   Score get score => _score;
 
-  /// Initialise le contrôleur avec une partition par défaut ou chargée.
+  /// Initialise le contrôleur avec une partition existante ou nouvelle.
   Future<void> initialize() async {
-    _score = _createDefaultScore(_defaultBarCount);
-    await loadScore();
+    if (_scoreId != null) {
+      await loadScore(_scoreId!);
+    } else {
+      _score = _createDefaultScore(_defaultBarCount);
+    }
   }
 
-  /// Charge la partition depuis le stockage.
-  Future<void> loadScore() async {
+  /// Charge une partition spécifique par son ID.
+  Future<void> loadScore(String scoreId) async {
     try {
-      final loadedScore = await _storageService.loadScore();
-      _score = loadedScore.measures.isEmpty
-          ? _createDefaultScore(_defaultBarCount)
-          : _enforceScoreIntegrity(loadedScore);
+      final loadedScore = await _storageService.loadScore(scoreId);
+      if (loadedScore != null) {
+        _score = _enforceScoreIntegrity(loadedScore);
+        _scoreId = scoreId;
+
+        // Charger les métadonnées si elles ne sont pas déjà présentes
+        if (_metadata == null) {
+          final allMetadata = await _storageService.loadScoresMetadata();
+          _metadata = allMetadata.firstWhere(
+            (m) => m.id == scoreId,
+            orElse: () => ScoreMetadata(
+              id: scoreId,
+              title: 'Partition sans titre',
+              createdAt: DateTime.now(),
+              lastModified: DateTime.now(),
+            ),
+          );
+        }
+      } else {
+        _score = _createDefaultScore(_defaultBarCount);
+      }
     } catch (e) {
       // En cas d'erreur, utiliser une partition par défaut
       _score = _createDefaultScore(_defaultBarCount);
@@ -51,15 +82,40 @@ class ScoreController {
     }
   }
 
-  /// Sauvegarde la partition actuelle.
+  /// Sauvegarde la partition actuelle avec ses métadonnées.
   Future<void> saveScore() async {
-    await _storageService.saveScore(_score);
+    if (_scoreId == null || _metadata == null) {
+      throw Exception('Impossible de sauvegarder: ID ou métadonnées manquants');
+    }
+
+    // Mettre à jour la date de dernière modification
+    _metadata = _metadata!.copyWith(lastModified: DateTime.now());
+
+    await _storageService.saveScore(_scoreId!, _score, _metadata!);
+  }
+
+  /// Crée une nouvelle partition avec métadonnées.
+  Future<void> createNewScore(ScoreMetadata metadata, Score score) async {
+    _scoreId = metadata.id;
+    _metadata = metadata;
+    _score = score;
+    await saveScore();
+  }
+
+  /// Met à jour les métadonnées de la partition.
+  Future<void> updateMetadata(ScoreMetadata newMetadata) async {
+    _metadata = newMetadata.copyWith(lastModified: DateTime.now());
+    if (_scoreId != null) {
+      await saveScore();
+    }
   }
 
   /// Efface la partition actuelle.
   Future<void> clearScore() async {
     _score = _createDefaultScore(_score.measures.length);
-    await _storageService.clearScore();
+    if (_scoreId != null && _metadata != null) {
+      await saveScore();
+    }
   }
 
   /// Change le nombre de mesures.
@@ -94,11 +150,6 @@ class ScoreController {
   }
 
   /// Ajoute une note dans une mesure.
-  ///
-  /// [measureIndex] : Index de la mesure (0-based)
-  /// [eventIndex] : Index de l'événement à remplacer
-  /// [selectedSymbol] : Symbole sélectionné (pour déterminer l'ornement/accent)
-  /// [selectedDuration] : Durée de la note à placer
   Future<void> addNoteAtBeat(
     int measureIndex, {
     required int eventIndex,
@@ -130,21 +181,17 @@ class ScoreController {
     final bool isRest = selectedSymbol == SelectedSymbol.rest;
     final bool placeAboveLine = selectedSymbol == SelectedSymbol.right;
 
-    // Pas d'ornement ni d'accent
-    final Ornament? ornament = null;
-    final Accent? accent = null;
-
     // Créer le NoteEvent
     final noteEvent = NoteEvent(
       actualDuration: eventDuration,
       writenDuration: selectedDuration,
       isRest: isRest,
-      ornament: ornament,
-      accent: accent,
+      ornament: null,
+      accent: null,
       isAboveLine: placeAboveLine,
     );
 
-    // Insérer la note dans la mesure (remplace toujours l'événement à l'index)
+    // Insérer la note dans la mesure
     final updatedMeasure = MeasureEditor.insertNotes(measure, eventIndex, [
       noteEvent,
     ]);
@@ -222,11 +269,6 @@ class ScoreController {
   }
 
   /// Modifie une note existante à l'index donné dans une mesure.
-  ///
-  /// [measureIndex] : Index de la mesure (0-based)
-  /// [eventIndex] : Index de l'événement à modifier
-  /// [accent] : Accent à appliquer (null pour retirer)
-  /// [ornament] : Ornement à appliquer (null pour retirer)
   Future<void> modifyNote(
     int measureIndex,
     int eventIndex, {
@@ -267,8 +309,6 @@ class ScoreController {
   }
 
   /// Trouve la note la plus proche d'une position donnée.
-  ///
-  /// Retourne la position exacte de la note trouvée, ou null si aucune note n'est proche.
   DurationFraction? findClosestNotePosition(int measureIndex, double position) {
     if (measureIndex < 0 || measureIndex >= _score.measures.length) {
       return null;

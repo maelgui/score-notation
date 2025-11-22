@@ -10,7 +10,7 @@ import '../utils/duration_converter.dart';
 import '../utils/measure_editor.dart';
 import '../utils/music_symbols.dart';
 import '../widgets/unified_palette.dart';
-import 'score_controller.dart';
+import 'score_with_metadata_controller.dart';
 
 /// Contrôleur pour gérer l'état et la logique de l'écran principal de la portée.
 /// Sépare la logique métier de l'interface utilisateur.
@@ -20,14 +20,14 @@ class StaffScreenController extends ChangeNotifier {
     int defaultBarCount = 4,
     int defaultMeasuresPerLine = 4,
   }) : _defaultMeasuresPerLine = defaultMeasuresPerLine {
-    _scoreController = ScoreController(
+    _scoreController = ScoreWithMetadataController(
       storageService: storageService,
       defaultBarCount: defaultBarCount,
     );
   }
 
   final int _defaultMeasuresPerLine;
-  late final ScoreController _scoreController;
+  late final ScoreWithMetadataController _scoreController;
 
   // État de l'interface
   bool _isLoading = true;
@@ -48,7 +48,7 @@ class StaffScreenController extends ChangeNotifier {
   int? get selectedEventIndex => _selectedEventIndex;
   SelectionState get selectionState => _selectionState;
   Score get score => _scoreController.score;
-  ScoreController get scoreController => _scoreController;
+  ScoreWithMetadataController get scoreController => _scoreController;
 
   /// Indique si une note est actuellement sélectionnée
   bool get hasSelection => _selectedMeasureIndex != null && _selectedEventIndex != null;
@@ -75,14 +75,6 @@ class StaffScreenController extends ChangeNotifier {
   }
 
 
-  /// Change le nombre de mesures par ligne
-  void setMeasuresPerLine(int count) {
-    if (measuresPerLine != count) {
-      _scoreController.setMeasuresPerLine(count);
-      _scoreController.saveScore();
-      notifyListeners();
-    }
-  }
 
   /// Change le symbole sélectionné
   void setSelectedSymbol(SelectedSymbol symbol) {
@@ -110,12 +102,6 @@ class StaffScreenController extends ChangeNotifier {
     }
   }
 
-  /// Change le nombre de barres
-  void setBarCount(int newCount) {
-    _scoreController.setMeasureCount(newCount);
-    notifyListeners();
-    _scoreController.saveScore();
-  }
 
   /// Ajoute une note à une position donnée
   Future<void> addNoteAtBeat(
@@ -131,6 +117,10 @@ class StaffScreenController extends ChangeNotifier {
       selectedSymbol: _selectedSymbol,
       selectedDuration: _selectedDuration!,
     );
+
+    // Sélectionner automatiquement la note/silence suivant
+    await _selectNextEvent(measureIndex, eventIndex);
+
     notifyListeners();
   }
 
@@ -230,8 +220,8 @@ class StaffScreenController extends ChangeNotifier {
         selectedDuration: _selectedDuration!,
       );
 
-      // Sélectionner la note suivante
-      await selectNote(_selectedMeasureIndex!, _selectedEventIndex! + 1, false);
+      // Sélectionner automatiquement la note/silence suivant
+      await _selectNextEvent(_selectedMeasureIndex!, _selectedEventIndex!);
       notifyListeners();
     }
   }
@@ -291,6 +281,36 @@ class StaffScreenController extends ChangeNotifier {
       clearSelectedNotes: true,
     );
     notifyListeners();
+  }
+
+  /// Sélectionne automatiquement la note/silence suivant après l'ajout d'une note
+  Future<void> _selectNextEvent(int measureIndex, int eventIndex) async {
+    // Calculer la position du prochain événement
+    int nextMeasureIndex = measureIndex;
+    int nextEventIndex = eventIndex + 1;
+
+    // Vérifier si on dépasse la mesure actuelle
+    if (nextEventIndex >= score.measures[measureIndex].events.length) {
+      // Passer à la mesure suivante
+      nextMeasureIndex++;
+      nextEventIndex = 0;
+
+      // Vérifier si on dépasse la partition
+      if (nextMeasureIndex >= score.measures.length) {
+        // Rester sur le dernier événement de la dernière mesure
+        nextMeasureIndex = score.measures.length - 1;
+        nextEventIndex = score.measures[nextMeasureIndex].events.length - 1;
+
+        // Si la dernière mesure est vide, ne pas sélectionner
+        if (nextEventIndex < 0) {
+          clearSelection();
+          return;
+        }
+      }
+    }
+
+    // Sélectionner le prochain événement
+    await selectNote(nextMeasureIndex, nextEventIndex, false);
   }
 
 }

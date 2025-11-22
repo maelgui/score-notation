@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:snare_notation/widgets/rudiment_icon.dart';
 
 import '../model/accent.dart';
 import '../model/note_event.dart';
@@ -7,6 +8,59 @@ import '../utils/music_symbols.dart';
 import 'symbol_palette.dart';
 
 enum ModificationSymbol { accent, flam, drag, roll }
+
+/// Définitions centralisées des symboles de palette pour éviter la duplication.
+class PaletteSymbols {
+  PaletteSymbols._();
+
+  /// Symboles principaux disponibles pour la sélection.
+  static const List<PaletteSymbol<SelectedSymbol>> availableSymbols = [
+    PaletteSymbol(
+      label: 'Droite',
+      id: SelectedSymbol.right,
+      symbol: MusicSymbols.quarterNote,
+    ),
+    PaletteSymbol(
+      label: 'Gauche',
+      id: SelectedSymbol.left,
+      symbol: MusicSymbols.quarterNoteUp,
+    ),
+    PaletteSymbol(
+      label: 'Silence',
+      id: SelectedSymbol.rest,
+      symbol: MusicSymbols.restQuarter,
+    ),
+    PaletteSymbol(label: 'Triolet', id: SelectedSymbol.triplet, symbol: '3'),
+  ];
+
+  /// Symboles de modification disponibles.
+  static final List<PaletteSymbol<ModificationSymbol>> modificationSymbols = [
+    const PaletteSymbol(
+      label: 'Accent',
+      id: ModificationSymbol.accent,
+      symbol: MusicSymbols.accent,
+    ),
+    PaletteSymbol(
+      label: 'Flam',
+      id: ModificationSymbol.flam,
+      symbol: MusicSymbols.flam,
+      iconBuilder: (context, isActive) =>
+          RudimentIcon(graceNoteCount: 1, isActive: isActive),
+    ),
+    PaletteSymbol(
+      label: 'Drag',
+      id: ModificationSymbol.drag,
+      symbol: MusicSymbols.drag,
+      iconBuilder: (context, isActive) =>
+          RudimentIcon(graceNoteCount: 2, isActive: isActive),
+    ),
+    const PaletteSymbol(
+      label: 'Roulement',
+      id: ModificationSymbol.roll,
+      symbol: MusicSymbols.roll,
+    ),
+  ];
+}
 
 /// Palette unifiée qui affiche tous les symboles (SelectedSymbol et ModificationSymbol) dans une même barre.
 class UnifiedPalette extends StatelessWidget {
@@ -146,14 +200,10 @@ class UnifiedPaletteButton extends StatelessWidget {
     final ColorScheme colorScheme = theme.colorScheme;
     final Color borderColor = isDisabled
         ? colorScheme.outline.withOpacity(0.3)
-        : (isActive
-            ? colorScheme.primary
-            : colorScheme.outline);
+        : (isActive ? colorScheme.primary : colorScheme.outline);
     final Color backgroundColor = isDisabled
         ? colorScheme.surface.withOpacity(0.5)
-        : (isActive
-            ? colorScheme.primaryContainer
-            : colorScheme.surface);
+        : (isActive ? colorScheme.primaryContainer : colorScheme.surface);
 
     return Opacity(
       opacity: isDisabled ? 0.5 : 1.0,
@@ -209,7 +259,9 @@ class UnifiedPaletteButton extends StatelessWidget {
                             fontSize: 32,
                             color: isDisabled
                                 ? Colors.grey
-                                : (isActive ? colorScheme.primary : Colors.black),
+                                : (isActive
+                                      ? colorScheme.primary
+                                      : Colors.black),
                             fontWeight: isActive
                                 ? FontWeight.bold
                                 : FontWeight.normal,

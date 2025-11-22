@@ -47,34 +47,25 @@ class BeamEngine {
 
       // Vérifier si cette note peut être beamed (eighth, sixteenth, thirty-second)
       // ou si c'est un silence qui peut être dans un groupe beamed
-      final bool canBeInBeamGroup = shouldBeam || note.event.isRest;
+      final bool canBeInBeamGroup = shouldBeam;
 
       if (canBeInBeamGroup) {
         // Vérifier si cette note est consécutive à la dernière note du groupe actuel
         bool isConsecutive = false;
         if (currentGroup.isNotEmpty) {
           // Trouver la dernière note (pas silence) du groupe actuel
-          int? lastNoteIndex;
-          for (int j = currentGroup.length - 1; j >= 0; j--) {
-            final idx = currentGroup[j];
-            if (!notePositions[idx].event.isRest) {
-              lastNoteIndex = idx;
-              break;
-            }
-          }
+          int lastNoteIndex = currentGroup.length - 1;
 
-          if (lastNoteIndex != null) {
-            final lastNote = notePositions[lastNoteIndex];
-            // Calculer la position attendue après la dernière note du groupe
-            DurationFraction expectedPosition = lastNote.position;
-            for (int j = lastNoteIndex; j < i; j++) {
-              expectedPosition = expectedPosition.add(
-                notePositions[j].event.actualDuration,
-              );
-            }
-            isConsecutive =
-                (note.position.subtract(expectedPosition).numerator.abs() < 2);
+          final lastNote = notePositions[lastNoteIndex];
+          // Calculer la position attendue après la dernière note du groupe
+          DurationFraction expectedPosition = lastNote.position;
+          for (int j = lastNoteIndex; j < i; j++) {
+            expectedPosition = expectedPosition.add(
+              notePositions[j].event.actualDuration,
+            );
           }
+          isConsecutive =
+              (note.position.subtract(expectedPosition).numerator.abs() < 2);
         }
 
         // Vérifier si on peut ajouter cette note au groupe actuel sans dépasser 1 temps
