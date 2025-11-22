@@ -19,15 +19,13 @@ class StaffScreenController extends ChangeNotifier {
     required StorageService storageService,
     int defaultBarCount = 4,
     int defaultMeasuresPerLine = 4,
-  }) : _defaultBarCount = defaultBarCount,
-       _defaultMeasuresPerLine = defaultMeasuresPerLine {
+  }) : _defaultMeasuresPerLine = defaultMeasuresPerLine {
     _scoreController = ScoreController(
       storageService: storageService,
       defaultBarCount: defaultBarCount,
     );
   }
 
-  final int _defaultBarCount;
   final int _defaultMeasuresPerLine;
   late final ScoreController _scoreController;
 
