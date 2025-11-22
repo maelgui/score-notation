@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../model/note_event.dart';
 
 /// Résultat du layout d'une note.
-/// 
+///
 /// Contient toutes les informations nécessaires pour dessiner et hit-tester une note,
 /// avec positions absolues dans la page.
 class NoteLayoutResult {
@@ -14,10 +14,6 @@ class NoteLayoutResult {
     required this.stemX,
     required this.stemTopY,
     required this.stemBottomY,
-    required this.beamLevel,
-    required this.beamStartsGroup,
-    required this.beamEndsGroup,
-    this.graceNotes = const [],
   });
 
   /// Référence au modèle métier de la note.
@@ -38,19 +34,6 @@ class NoteLayoutResult {
   /// Position Y du bas de la hampe.
   final double stemBottomY;
 
-  /// Niveau du beam (0 = croche, 1 = double, 2 = triple, etc.).
-  /// 0 si la note n'est pas beamed.
-  final int beamLevel;
-
-  /// True si cette note commence un groupe de beams.
-  final bool beamStartsGroup;
-
-  /// True si cette note termine un groupe de beams.
-  final bool beamEndsGroup;
-
-  /// Grace notes attachées (pour usage futur).
-  final List<GraceNoteLayout> graceNotes;
-
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -60,11 +43,7 @@ class NoteLayoutResult {
         boundingBox == other.boundingBox &&
         stemX == other.stemX &&
         stemTopY == other.stemTopY &&
-        stemBottomY == other.stemBottomY &&
-        beamLevel == other.beamLevel &&
-        beamStartsGroup == other.beamStartsGroup &&
-        beamEndsGroup == other.beamEndsGroup &&
-        _listEquals(graceNotes, other.graceNotes);
+        stemBottomY == other.stemBottomY;
   }
 
   @override
@@ -75,29 +54,5 @@ class NoteLayoutResult {
         stemX,
         stemTopY,
         stemBottomY,
-        beamLevel,
-        beamStartsGroup,
-        beamEndsGroup,
-        Object.hashAll(graceNotes),
       );
-
-  bool _listEquals<T>(List<T> a, List<T> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
 }
-
-/// Layout d'une grace note (pour usage futur).
-class GraceNoteLayout {
-  const GraceNoteLayout({
-    required this.position,
-    required this.boundingBox,
-  });
-
-  final Offset position;
-  final Rect boundingBox;
-}
-

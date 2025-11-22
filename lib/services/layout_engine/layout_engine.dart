@@ -156,22 +156,6 @@ class LayoutEngine {
         stemBottomY: absoluteStemBottomY,
       );
 
-      // Calculer les informations de beam
-      int beamLevel = 0;
-      bool beamStartsGroup = false;
-      bool beamEndsGroup = false;
-      if (isBeamed) {
-        // Trouver le beam correspondant
-        for (final beam in relativeBeamSegments) {
-          if (beam.noteIndices.contains(i)) {
-            beamLevel = beam.level;
-            beamStartsGroup = beam.noteIndices.first == i;
-            beamEndsGroup = beam.noteIndices.last == i;
-            break;
-          }
-        }
-      }
-
       notes.add(
         NoteLayoutResult(
           noteModel: event,
@@ -180,10 +164,6 @@ class LayoutEngine {
           stemX: absoluteStemX ?? noteX,
           stemTopY: absoluteStemTopY ?? noteY,
           stemBottomY: absoluteStemBottomY ?? noteY,
-          beamLevel: beamLevel,
-          beamStartsGroup: beamStartsGroup,
-          beamEndsGroup: beamEndsGroup,
-          graceNotes: const [],
         ),
       );
     }

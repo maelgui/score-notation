@@ -251,27 +251,23 @@ class BeamEngine {
     final double stemX = notePositions[noteIndex].x + EngravingDefaults.stemDownXOffset;
     final double beamLength = EngravingDefaults.beamThickness * 3; // Longueur du beam coupé
 
-    // Déterminer la direction du beam coupé
+    // Déterminer les positions du beam coupé
     final int positionInGroup = group.indexOf(noteIndex);
     final bool isFirst = positionInGroup == 0;
     final bool isLast = positionInGroup == group.length - 1;
 
-    String direction;
     double startX, endX;
 
     if (isFirst) {
       // Première note : beam vers la droite
-      direction = 'right';
       startX = stemX;
       endX = stemX + beamLength;
     } else if (isLast) {
       // Dernière note : beam vers la gauche
-      direction = 'left';
       startX = stemX - beamLength;
       endX = stemX + EngravingDefaults.stemThickness;
     } else {
       // Note au milieu : beam vers la note suivante par défaut
-      direction = 'right';
       startX = stemX;
       endX = stemX + beamLength;
     }
