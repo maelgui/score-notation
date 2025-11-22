@@ -4,6 +4,7 @@ import '../model/note_event.dart';
 import '../model/ornament.dart';
 import '../model/score.dart';
 import '../model/time_signature.dart';
+import '../model/tuplet_info.dart';
 import '../model/measure.dart';
 import '../utils/measure_editor.dart';
 import '../services/storage_service.dart';
@@ -144,11 +145,9 @@ class ScoreController {
     );
 
     // Insérer la note dans la mesure (remplace toujours l'événement à l'index)
-    final updatedMeasure = MeasureEditor.insertNotes(
-      measure,
-      eventIndex,
-      [noteEvent],
-    );
+    final updatedMeasure = MeasureEditor.insertNotes(measure, eventIndex, [
+      noteEvent,
+    ]);
 
     final updatedMeasures = <Measure>[..._score.measures];
     updatedMeasures[measureIndex] = updatedMeasure;
@@ -173,29 +172,35 @@ class ScoreController {
       return;
     }
 
-    // Durée de chaque note du triolet (2/3 de la durée de base)
+    // Durée de chaque note du triolet (1/3 de la durée de base)
     final tripletNoteDuration = DurationFraction(
       baseDuration.numerator,
       baseDuration.denominator * 3,
     );
+
+    // Information du tuplet (3 notes prennent la durée de 2 notes)
+    final tupletInfo = const TupletInfo(3, 1);
 
     // Créer 3 notes du triolet (alternant droite/gauche)
     final tripletNotes = [
       NoteEvent(
         actualDuration: tripletNoteDuration,
         writenDuration: writenDuration,
+        tuplet: tupletInfo,
         isRest: false,
         isAboveLine: true, // Droite
       ),
       NoteEvent(
         actualDuration: tripletNoteDuration,
         writenDuration: writenDuration,
+        tuplet: tupletInfo,
         isRest: false,
         isAboveLine: false, // Gauche
       ),
       NoteEvent(
         actualDuration: tripletNoteDuration,
         writenDuration: writenDuration,
+        tuplet: tupletInfo,
         isRest: false,
         isAboveLine: true, // Droite
       ),

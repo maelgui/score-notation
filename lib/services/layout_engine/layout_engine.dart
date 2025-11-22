@@ -27,14 +27,13 @@ class LayoutSettings {
   final double staffY;
 }
 
-
 /// Point d'entrée principal du Layout Engine.
 /// Orchestre tous les engines pour calculer le layout d'une mesure.
 class LayoutEngine {
   LayoutEngine._();
 
   /// Calcule le layout complet d'une mesure avec positions absolues.
-  /// 
+  ///
   /// [measure] : La mesure à layout
   /// [settings] : Paramètres de layout
   /// [measureOrigin] : Position absolue de la mesure dans la page
@@ -59,10 +58,17 @@ class LayoutEngine {
     );
 
     // 2. Extraire les événements avec leurs positions pour le beam engine
-    final eventsWithPositions = MeasureEditor.extractEventsWithPositions(measure);
-    final notePositionsWithEvents = <({double x, NoteEvent event, DurationFraction position})>[];
-    
-    for (int i = 0; i < notePositions.length && i < eventsWithPositions.length; i++) {
+    final eventsWithPositions = MeasureEditor.extractEventsWithPositions(
+      measure,
+    );
+    final notePositionsWithEvents =
+        <({double x, NoteEvent event, DurationFraction position})>[];
+
+    for (
+      int i = 0;
+      i < notePositions.length && i < eventsWithPositions.length;
+      i++
+    ) {
       final pos = notePositions[i];
       final eventPos = eventsWithPositions[i];
       notePositionsWithEvents.add((
@@ -73,19 +79,22 @@ class LayoutEngine {
     }
 
     // 3. Trouver les groupes de beams
-    final beamGroups = BeamEngine.findBeamGroups(notePositionsWithEvents, measure);
+    final beamGroups = BeamEngine.findBeamGroups(
+      notePositionsWithEvents,
+      measure,
+    );
     final Set<int> beamedNoteIndices = {};
     for (final group in beamGroups) {
       beamedNoteIndices.addAll(group);
     }
-    
+
     // 4. Calculer les segments de beams (avec positions relatives)
     final relativeBeamSegments = BeamEngine.computeBeamSegments(
       notePositionsWithEvents,
       beamGroups,
       referenceStaffY,
     );
-    
+
     // Calculer beamBaseY pour les hampes beamed
     double? beamBaseY;
     if (relativeBeamSegments.isNotEmpty) {
@@ -95,14 +104,21 @@ class LayoutEngine {
 
     // 5. Créer les NoteLayoutResult avec positions absolues
     final List<NoteLayoutResult> notes = [];
-    for (int i = 0; i < notePositions.length && i < measure.events.length; i++) {
+    for (
+      int i = 0;
+      i < notePositions.length && i < measure.events.length;
+      i++
+    ) {
       final pos = notePositions[i];
       final event = measure.events[i];
       final isBeamed = beamedNoteIndices.contains(i);
-      
+
       // Calculer la position Y relative
-      final double relativeNoteY = StemEngine.computeNoteCenterY(event, referenceStaffY);
-      
+      final double relativeNoteY = StemEngine.computeNoteCenterY(
+        event,
+        referenceStaffY,
+      );
+
       // Calculer les positions de la hampe (relatives)
       final stemPos = StemEngine.computeStemPosition(
         pos.x,
@@ -114,17 +130,14 @@ class LayoutEngine {
       );
 
       // Convertir en positions absolues (pos.x est déjà calculé avec uniformMeasureWidth)
-      final double noteX = measureOrigin.dx +
-          EngravingDefaults.spaceBeforeBarline +
-          pos.x;
+      final double noteX =
+          measureOrigin.dx + EngravingDefaults.spaceBeforeBarline + pos.x;
       final double noteY = absoluteStaffY + (relativeNoteY - referenceStaffY);
       final Offset noteheadPosition = Offset(noteX, noteY);
 
       final double? absoluteStemX = event.isRest
           ? null
-          : measureOrigin.dx +
-              EngravingDefaults.spaceBeforeBarline +
-              stemPos.x;
+          : measureOrigin.dx + EngravingDefaults.spaceBeforeBarline + stemPos.x;
       final double? absoluteStemTopY = event.isRest
           ? null
           : absoluteStaffY + (stemPos.startY - referenceStaffY);
@@ -159,34 +172,37 @@ class LayoutEngine {
         }
       }
 
-      notes.add(NoteLayoutResult(
-        noteModel: event,
-        noteheadPosition: noteheadPosition,
-        boundingBox: boundingBox,
-        stemX: absoluteStemX ?? noteX,
-        stemTopY: absoluteStemTopY ?? noteY,
-        stemBottomY: absoluteStemBottomY ?? noteY,
-        beamLevel: beamLevel,
-        beamStartsGroup: beamStartsGroup,
-        beamEndsGroup: beamEndsGroup,
-        graceNotes: const [],
-      ));
+      notes.add(
+        NoteLayoutResult(
+          noteModel: event,
+          noteheadPosition: noteheadPosition,
+          boundingBox: boundingBox,
+          stemX: absoluteStemX ?? noteX,
+          stemTopY: absoluteStemTopY ?? noteY,
+          stemBottomY: absoluteStemBottomY ?? noteY,
+          beamLevel: beamLevel,
+          beamStartsGroup: beamStartsGroup,
+          beamEndsGroup: beamEndsGroup,
+          graceNotes: const [],
+        ),
+      );
     }
 
     // 6. Convertir les beams en positions absolues
-    final List<LayoutedBeamSegment> absoluteBeams = relativeBeamSegments.map((beam) {
+    final List<LayoutedBeamSegment> absoluteBeams = relativeBeamSegments.map((
+      beam,
+    ) {
       return LayoutedBeamSegment(
         level: beam.level,
-        startX: measureOrigin.dx +
+        startX:
+            measureOrigin.dx +
             EngravingDefaults.spaceBeforeBarline +
             beam.startX,
-        endX: measureOrigin.dx +
-            EngravingDefaults.spaceBeforeBarline +
-            beam.endX,
+        endX:
+            measureOrigin.dx + EngravingDefaults.spaceBeforeBarline + beam.endX,
         y: absoluteStaffY + (beam.y - referenceStaffY),
         noteIndices: beam.noteIndices,
-        isPartial: beam.isPartial,
-        partialDirection: beam.partialDirection,
+        tupletNumber: beam.tupletNumber,
       );
     }).toList();
 

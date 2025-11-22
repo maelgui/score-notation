@@ -4,7 +4,7 @@ import '../../model/measure.dart';
 import 'note_layout_result.dart';
 
 /// Résultat du layout d'une mesure.
-/// 
+///
 /// Contient toutes les informations nécessaires pour dessiner la mesure,
 /// avec positions absolues dans la page.
 class MeasureLayoutResult {
@@ -60,8 +60,7 @@ class LayoutedBeamSegment {
     required this.endX,
     required this.y,
     required this.noteIndices,
-    this.isPartial = false,
-    this.partialDirection,
+    this.tupletNumber,
   });
 
   /// Niveau du beam (0 = plus bas, 1, 2, 3...).
@@ -79,11 +78,12 @@ class LayoutedBeamSegment {
   /// Indices des notes dans le groupe (dans la liste des notes de la mesure).
   final List<int> noteIndices;
 
-  /// Si true, c'est un beam coupé (partial beam).
-  final bool isPartial;
+  /// Numéro du tuplet à afficher sous ce beam (null si pas de tuplet).
+  final int? tupletNumber;
 
-  /// Direction du beam coupé : 'left' ou 'right'.
-  final String? partialDirection;
+  /// Indique si c'est un beam partiel (coupé).
+  bool get isPartial => noteIndices.length == 1;
+
+  /// Indique si c'est un beam normal (continu).
+  bool get isNormal => noteIndices.length > 1;
 }
-
-

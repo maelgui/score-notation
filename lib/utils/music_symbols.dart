@@ -16,7 +16,7 @@ class MusicSymbols {
   static const String flam = '\uE560';
   static const String drag = '\uE123';
   static const String roll = '\uE221'; // Tremolo2 (roulement avec 2 barres)
-  
+
   // Rests (silences)
   static const String restWhole = '\uE4E2'; // Pause (ronde)
   static const String restHalf = '\uE4E3'; // Demi-pause (blanche)
@@ -24,30 +24,30 @@ class MusicSymbols {
   static const String restEighth = '\uE4E6'; // Demi-soupir (croche)
   static const String restSixteenth = '\uE4E7'; // Quart de soupir (double croche)
   static const String restThirtySecond = '\uE4E8'; // Huitième de soupir (triple croche)
-  
+
   // Notes complètes avec durées
   // Ronde (whole note) - notehead blanc sans hampe
   static const String wholeNote = '\uE1D2'; // NoteWhole (ronde complète)
-  
+
   // Blanche (half note) - notehead blanc avec hampe
   static const String halfNote = '\uE1D4'; // NoteHalfDown (blanche avec hampe vers le bas)
-  
+
   // Noire (quarter note) - notehead noir avec hampe
   static const String quarterNote = '\uE1D6'; // NoteQuarterDown (noire complète avec hampe vers le bas)
   static const String quarterNoteUp = '\uE1D5'; // NoteQuarterUp (noire complète avec hampe vers le haut)
-  
+
   // Croche (eighth note)
   static const String eighthNote = '\uE1D8'; // NoteEighthDown
   static const String eighthNoteUp = '\uE1D7'; // NoteEighthUp
-  
+
   // Double croche (sixteenth note)
   static const String sixteenthNote = '\uE1DA'; // NoteSixteenthDown
   static const String sixteenthNoteUp = '\uE1D9'; // NoteSixteenthUp
-  
+
   // Triple croche (thirty-second note)
   static const String thirtySecondNote = '\uE1DC'; // NoteThirtySecondDown
   static const String thirtySecondNoteUp = '\uE1DB'; // NoteThirtySecondUp
-  
+
   // Blanche (half note)
   static const String halfNoteUp = '\uE1D3'; // NoteHalfUp
 
@@ -68,12 +68,33 @@ class MusicSymbols {
   static const String timeSig8 = '\uE088';
   static const String timeSig9 = '\uE089';
 
+  // Tuplets (U+E880–U+E88F)
+  static const String tuplet0 = '\uE880';
+  static const String tuplet1 = '\uE881';
+  static const String tuplet2 = '\uE882';
+  static const String tuplet3 = '\uE883';
+  static const String tuplet4 = '\uE884';
+  static const String tuplet5 = '\uE885';
+  static const String tuplet6 = '\uE886';
+  static const String tuplet7 = '\uE887';
+  static const String tuplet8 = '\uE888';
+  static const String tuplet9 = '\uE889';
+  static const String tupletColon = '\uE88A';
+
   /// Retourne le glyphe SMuFL pour un chiffre de signature rythmique (0-9)
   static String timeSigDigit(int digit) {
     if (digit < 0 || digit > 9) {
       throw ArgumentError('Le chiffre doit être entre 0 et 9, reçu: $digit');
     }
     return String.fromCharCode(0xE080 + digit);
+  }
+
+  /// Retourne le glyphe SMuFL pour un chiffre de tuplet (0-9)
+  static String tupletDigit(int digit) {
+    if (digit < 0 || digit > 9) {
+      throw ArgumentError('Le chiffre doit être entre 0 et 9, reçu: $digit');
+    }
+    return String.fromCharCode(0xE880 + digit);
   }
 
   static const Map<String, String> byName = {

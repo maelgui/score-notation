@@ -135,6 +135,19 @@ class StaffPainter extends CustomPainter {
             EngravingDefaults.beamThickness,
             Colors.black,
           );
+
+          // Dessiner le numéro de tuplet si ce beam en a un
+          if (beam.tupletNumber != null && beam.level == 0) {
+            // Seulement sur le beam principal (level 0) pour éviter les doublons
+            final double centerX = (beam.startX + beam.endX) / 2;
+            final double tupletY = beam.y + EngravingDefaults.symbolFontSize * 0.8;
+
+            _drawTupletNumber(
+              canvas,
+              beam.tupletNumber!,
+              Offset(centerX, tupletY),
+            );
+          }
         }
 
         // Dessiner une barre à la fin de chaque mesure
@@ -276,8 +289,8 @@ class StaffPainter extends CustomPainter {
       bottomGroupWidth += bottomPainters[i].width;
       if (i < bottomPainters.length - 1) {
         bottomGroupWidth += timeSigSpacing;
-      }
-    }
+}
+}
 
     // 5. Alignement centré : utiliser la largeur maximale
     final double maxWidth = topGroupWidth > bottomGroupWidth
@@ -294,7 +307,7 @@ class StaffPainter extends CustomPainter {
     final double topY = centerY - fontSize * 0.7;
     final double bottomY = centerY + fontSize * 0.7;
 
-    // 8. Dessiner les chiffres du haut (alignés centrés)
+//8.Dessinerleschiffresduhaut(alignéscentrés)
     double currentX = baseX + (maxWidth - topGroupWidth) / 2;
     for (int i = 0; i < topPainters.length; i++) {
       final painter = topPainters[i];
@@ -343,7 +356,7 @@ class StaffPainter extends CustomPainter {
   }
 
   /// Dessine le curseur en tenant compte de plusieurs portées.
-  /// 
+  ///
   /// Calcule la position X depuis cursor.positionInMeasure.
   void _drawCursor(
     Canvas canvas,
@@ -354,11 +367,11 @@ class StaffPainter extends CustomPainter {
     // Trouver la mesure correspondante
     final measureRect = measureBounds[cursor.measureIndex];
     if (measureRect == null) return;
-    
+
     // Trouver le système qui contient cette mesure
     StaffLayoutResult? containingSystem;
     MeasureLayoutResult? containingMeasure;
-    
+
     for (final system in pageLayoutResult.systems) {
       for (final measureLayout in system.measures) {
         if (measureLayout.measureModel == score.measures[cursor.measureIndex]) {
@@ -370,30 +383,62 @@ class StaffPainter extends CustomPainter {
       if (containingSystem != null) break;
     }
     print(cursor);
-    
+
     if (containingSystem == null || containingMeasure == null) return;
-    
+
     // Calculer la position X depuis cursor.positionInMeasure
     final measure = containingMeasure.measureModel;
     final double normalized = SelectionUtils.positionToNormalizedX(
       position: cursor.positionInMeasure,
       maxDuration: measure.maxDuration,
     );
-    
+
     final double notesStartX = containingMeasure.barlineXStart + EngravingDefaults.spaceBeforeBarline;
     final double notesEndX = containingMeasure.barlineXEnd - EngravingDefaults.spaceBeforeBarline;
     final double notesSpan = notesEndX - notesStartX;
     final double cursorX = notesStartX + normalized * notesSpan;
-    
+
     // Dessiner le curseur
     final double extent = EngravingDefaults.staffSpace * 2.5;
     final double top = (containingSystem.staffY - extent).clamp(0.0, size.height);
     final double bottom = (containingSystem.staffY + extent).clamp(0.0, size.height);
-    
+
     canvas.drawLine(
       Offset(cursorX, top),
       Offset(cursorX, bottom),
       _cursorPaint,
     );
+  }
+
+
+  /// Dessine un numéro de tuplet à la position donnée en utilisant les glyphes SMuFL.
+  void _drawTupletNumber(
+    Canvas canvas,
+    int number,
+    Offset position,
+  ) {
+    // Utiliser le glyphe SMuFL spécifique pour les tuplets
+    final String tupletGlyph = MusicSymbols.tupletDigit(number);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: tupletGlyph,
+        style: TextStyle(
+          fontFamily: 'Bravura',
+          fontSize: EngravingDefaults.symbolFontSize * 0.8, // Taille appropriée pour les tuplets
+          color: Colors.black,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+
+    // Centrer le texte sur la position
+    final offset = Offset(
+      position.dx - textPainter.width / 2,
+      position.dy - textPainter.height / 2,
+    );
+
+    textPainter.paint(canvas, offset);
   }
 }
