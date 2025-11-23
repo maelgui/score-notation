@@ -390,7 +390,6 @@ class StaffPainter extends CustomPainter {
       }
       if (containingSystem != null) break;
     }
-    print(cursor);
 
     if (containingSystem == null || containingMeasure == null) return;
 

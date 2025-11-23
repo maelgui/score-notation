@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import 'measure.dart';
+import 'time_signature.dart';
+import '../utils/constants.dart';
 
 /// Partition complète de caisse claire écossaise.
 ///
@@ -65,6 +67,27 @@ class Score {
           .map((m) => Measure.fromJson(m as Map<String, dynamic>))
           .toList(),
       measuresPerLine: json['measuresPerLine'] as int? ?? 4,
+    );
+  }
+
+  /// Crée une partition par défaut avec les paramètres standards.
+  factory Score.defaultScore({
+    int? measureCount,
+    int measuresPerLine = 4,
+  }) {
+    final timeSignature = TimeSignature(
+      AppConstants.defaultBeatsPerBar,
+      AppConstants.defaultTimeSignatureDenominator,
+    );
+
+    final count = measureCount ?? AppConstants.defaultBarCount;
+
+    return Score(
+      measures: List.generate(
+        count,
+        (index) => Measure.empty(timeSignature, index + 1),
+      ),
+      measuresPerLine: measuresPerLine,
     );
   }
 }

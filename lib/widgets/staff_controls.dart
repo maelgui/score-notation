@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../utils/music_symbols.dart';
 
 /// Widget pour les contrôles de la portée (nombre de barres, mesures par ligne, etc.)
-class StaffControls extends StatelessWidget {
-  const StaffControls({
+class DurationControls extends StatelessWidget {
+  const DurationControls({
     super.key,
     required this.selectedDuration,
     required this.onDurationChanged,

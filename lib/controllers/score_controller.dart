@@ -4,7 +4,6 @@ import '../model/note_event.dart';
 import '../model/ornament.dart';
 import '../model/score.dart';
 import '../model/score_metadata.dart';
-import '../model/time_signature.dart';
 import '../model/tuplet_info.dart';
 import '../model/measure.dart';
 import '../utils/measure_editor.dart';
@@ -15,19 +14,16 @@ import '../utils/music_symbols.dart';
 import '../widgets/unified_palette.dart';
 
 /// Contrôleur pour gérer une partition avec ses métadonnées.
-class ScoreWithMetadataController {
-  ScoreWithMetadataController({
+class ScoreController {
+  ScoreController({
     required StorageService storageService,
     String? scoreId,
     ScoreMetadata? metadata,
-    int defaultBarCount = AppConstants.defaultBarCount,
   }) : _storageService = storageService,
        _scoreId = scoreId,
-       _metadata = metadata,
-       _defaultBarCount = defaultBarCount;
+       _metadata = metadata;
 
   final StorageService _storageService;
-  final int _defaultBarCount;
 
   String? _scoreId;
   ScoreMetadata? _metadata;
@@ -47,7 +43,7 @@ class ScoreWithMetadataController {
     if (_scoreId != null) {
       await loadScore(_scoreId!);
     } else {
-      _score = _createDefaultScore(_defaultBarCount);
+      _score = Score.defaultScore();
     }
   }
 
@@ -73,11 +69,11 @@ class ScoreWithMetadataController {
           );
         }
       } else {
-        _score = _createDefaultScore(_defaultBarCount);
+        _score = Score.defaultScore();
       }
     } catch (e) {
       // En cas d'erreur, utiliser une partition par défaut
-      _score = _createDefaultScore(_defaultBarCount);
+      _score = Score.defaultScore();
       rethrow;
     }
   }
@@ -112,7 +108,7 @@ class ScoreWithMetadataController {
 
   /// Efface la partition actuelle.
   Future<void> clearScore() async {
-    _score = _createDefaultScore(_score.measures.length);
+    _score = Score.defaultScore(measureCount: _score.measures.length);
     if (_scoreId != null && _metadata != null) {
       await saveScore();
     }
@@ -129,7 +125,7 @@ class ScoreWithMetadataController {
       // Ajouter des mesures
       final newMeasures = <Measure>[..._score.measures];
       while (newMeasures.length < newCount) {
-        newMeasures.add(_createDefaultMeasure(newMeasures.length + 1));
+        newMeasures.add(Measure.defaultMeasure(newMeasures.length + 1));
       }
       _score = _score.copyWith(measures: newMeasures);
     } else if (newCount < _score.measures.length) {
@@ -357,24 +353,6 @@ class ScoreWithMetadataController {
   }
 
   // === Méthodes privées ===
-
-  Score _createDefaultScore(int count, {int measuresPerLine = 4}) {
-    return Score(
-      measures: List.generate(
-        count,
-        (index) => _createDefaultMeasure(index + 1),
-      ),
-      measuresPerLine: measuresPerLine,
-    );
-  }
-
-  Measure _createDefaultMeasure(int number) {
-    final timeSignature = TimeSignature(
-      AppConstants.defaultBeatsPerBar,
-      AppConstants.defaultTimeSignatureDenominator,
-    );
-    return Measure.empty(timeSignature, number);
-  }
 
   Score _enforceScoreIntegrity(Score score) {
     // Normaliser les numéros de mesures pour s'assurer qu'ils sont corrects

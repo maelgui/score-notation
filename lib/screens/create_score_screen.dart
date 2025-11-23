@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../model/measure.dart';
 import '../model/score.dart';
 import '../model/score_metadata.dart';
-import '../model/time_signature.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import 'staff_screen.dart';
@@ -59,7 +57,10 @@ class _CreateScoreScreenState extends State<CreateScoreScreen> {
       );
 
       // Créer une partition vide avec le nombre de mesures spécifié
-      final score = _createDefaultScore(_measureCount, _measuresPerLine);
+      final score = Score.defaultScore(
+        measureCount: _measureCount,
+        measuresPerLine: _measuresPerLine,
+      );
 
       // Sauvegarder la partition et ses métadonnées
       await _storageService.saveScore(scoreId, score, metadata);
@@ -82,21 +83,6 @@ class _CreateScoreScreenState extends State<CreateScoreScreen> {
         );
       }
     }
-  }
-
-  Score _createDefaultScore(int measureCount, int measuresPerLine) {
-    final timeSignature = TimeSignature(
-      AppConstants.defaultBeatsPerBar,
-      AppConstants.defaultTimeSignatureDenominator,
-    );
-
-    return Score(
-      measures: List.generate(
-        measureCount,
-        (index) => Measure.empty(timeSignature, index + 1),
-      ),
-      measuresPerLine: measuresPerLine,
-    );
   }
 
   @override

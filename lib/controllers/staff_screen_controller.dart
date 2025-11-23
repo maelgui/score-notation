@@ -10,24 +10,20 @@ import '../utils/duration_converter.dart';
 import '../utils/measure_editor.dart';
 import '../utils/music_symbols.dart';
 import '../widgets/unified_palette.dart';
-import 'score_with_metadata_controller.dart';
+import 'score_controller.dart';
 
 /// Contrôleur pour gérer l'état et la logique de l'écran principal de la portée.
 /// Sépare la logique métier de l'interface utilisateur.
 class StaffScreenController extends ChangeNotifier {
   StaffScreenController({
     required StorageService storageService,
-    int defaultBarCount = 4,
-    int defaultMeasuresPerLine = 4,
-  }) : _defaultMeasuresPerLine = defaultMeasuresPerLine {
-    _scoreController = ScoreWithMetadataController(
+  }) {
+    _scoreController = ScoreController(
       storageService: storageService,
-      defaultBarCount: defaultBarCount,
     );
   }
 
-  final int _defaultMeasuresPerLine;
-  late final ScoreWithMetadataController _scoreController;
+  late final ScoreController _scoreController;
 
   // État de l'interface
   bool _isLoading = true;
@@ -48,7 +44,7 @@ class StaffScreenController extends ChangeNotifier {
   int? get selectedEventIndex => _selectedEventIndex;
   SelectionState get selectionState => _selectionState;
   Score get score => _scoreController.score;
-  ScoreWithMetadataController get scoreController => _scoreController;
+  ScoreController get scoreController => _scoreController;
 
   /// Indique si une note est actuellement sélectionnée
   bool get hasSelection => _selectedMeasureIndex != null && _selectedEventIndex != null;
@@ -73,8 +69,6 @@ class StaffScreenController extends ChangeNotifier {
       rethrow;
     }
   }
-
-
 
   /// Change le symbole sélectionné
   void setSelectedSymbol(SelectedSymbol symbol) {
@@ -101,7 +95,6 @@ class StaffScreenController extends ChangeNotifier {
       rethrow;
     }
   }
-
 
   /// Ajoute une note à une position donnée
   Future<void> addNoteAtBeat(

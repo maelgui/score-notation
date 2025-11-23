@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/staff_screen_controller.dart';
-import '../model/note_event.dart';
-import '../model/selection_state.dart';
 import '../services/storage_service.dart';
 import '../utils/bravura_metrics.dart';
 import '../utils/music_symbols.dart';
@@ -29,7 +27,6 @@ class _StaffScreenState extends State<StaffScreen> {
     super.initState();
     _controller = StaffScreenController(
       storageService: StorageService(),
-      defaultBarCount: 4,
     );
     // Charger la partition spécifique
     _controller.scoreController.loadScore(widget.scoreId);
@@ -125,33 +122,6 @@ class _StaffScreenContent extends StatefulWidget {
 }
 
 class _StaffScreenContentState extends State<_StaffScreenContent> {
-  StaffCursorPosition? _cursorPosition;
-
-  Future<void> _handleNoteSelection(
-    int measureIndex,
-    int beatIndex,
-    bool isLongPress,
-  ) async {
-    // Sélectionner la note à cette position
-    await widget.controller.selectNote(measureIndex, beatIndex, false);
-    setState(() {});
-  }
-
-  void _handleSymbolSelected(SelectedSymbol symbol) {
-    // Si une note est sélectionnée, la remplacer
-    if (widget.controller.hasSelection) {
-      widget.controller.replaceSelectedNote(symbol);
-    } else {
-      // Sinon, juste changer le symbole sélectionné
-      widget.controller.setSelectedSymbol(symbol);
-    }
-  }
-
-  void _handleModificationSymbolSelected(String symbolId) {
-    widget.controller.modifySelectedNote(symbolId);
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -166,18 +136,21 @@ class _StaffScreenContentState extends State<_StaffScreenContent> {
                 cursorPosition: widget.controller.selectionState.cursor,
                 selectedNotes: widget.controller.selectionState.selectedNotes,
                 measuresPerLine: widget.controller.score.measuresPerLine,
-                onBeatSelected: _handleNoteSelection,
+                onBeatSelected: widget.controller.selectNote,
                 onCursorChanged: widget.controller.handleCursorChanged,
-                onSelectionDragStart: widget.controller.handleSelectionDragStart,
-                onSelectionDragUpdate: widget.controller.handleSelectionDragUpdate,
+                onSelectionDragStart:
+                    widget.controller.handleSelectionDragStart,
+                onSelectionDragUpdate:
+                    widget.controller.handleSelectionDragUpdate,
                 onSelectionDragEnd: widget.controller.handleSelectionDragEnd,
                 onSelectionCleared: widget.controller.clearSelection,
               ),
             ),
             const Divider(height: 1),
             // Contrôles de la portée (durée, nombre de mesures, etc.)
-            StaffControls(
-              selectedDuration: widget.controller.selectedDuration ?? NoteDuration.quarter,
+            DurationControls(
+              selectedDuration:
+                  widget.controller.selectedDuration ?? NoteDuration.quarter,
               onDurationChanged: widget.controller.setSelectedDuration,
             ),
             const Divider(height: 1),
@@ -187,8 +160,8 @@ class _StaffScreenContentState extends State<_StaffScreenContent> {
               availableSymbols: PaletteSymbols.availableSymbols,
               modificationSymbols: PaletteSymbols.modificationSymbols,
               selectedEvent: widget.controller.selectedEvent,
-              onSelectedSymbolSelected: _handleSymbolSelected,
-              onModificationSymbolSelected: _handleModificationSymbolSelected,
+              onSelectedSymbolSelected: widget.controller.replaceSelectedNote,
+              onModificationSymbolSelected: widget.controller.modifySelectedNote,
             ),
           ],
         );

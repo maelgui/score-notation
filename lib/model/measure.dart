@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'duration_fraction.dart';
 import 'note_event.dart';
 import 'time_signature.dart';
+import '../utils/constants.dart';
 
 /// Mesure musicale avec une liste simple de NoteEvent.
 ///
@@ -76,6 +77,15 @@ class Measure {
     return Measure(timeSignature: timeSignature, events: events, number: number);
   }
 
+  /// Crée une mesure par défaut avec la signature rythmique standard.
+  factory Measure.defaultMeasure(int number) {
+    final timeSignature = TimeSignature(
+      AppConstants.defaultBeatsPerBar,
+      AppConstants.defaultTimeSignatureDenominator,
+    );
+    return Measure.empty(timeSignature, number);
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -118,5 +128,3 @@ class Measure {
     );
   }
 }
-
-
